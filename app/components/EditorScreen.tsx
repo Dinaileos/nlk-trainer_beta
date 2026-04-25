@@ -840,15 +840,23 @@ if (e.shiftKey) {
       </div>
 
       {/* Variant Modal */}
-      {variantModalOpen && (
-        <VariantModal 
-          cellIndex={variantModalCellIndex}
-          onClose={() => setVariantModalOpen(false)}
-          cellVariants={cellVariants}
-          setCellVariants={setCellVariants}
-          showToast={showToast}
-        />
-      )}
+      <VariantModal 
+        cellIndex={variantModalCellIndex}
+        isOpen={variantModalOpen}
+        onClose={() => {
+          const key = variantModalCellIndex.toString();
+          const vars = cellVariants[key] || [];
+          if (vars.length < 2) {
+            const newVariants = { ...cellVariants };
+            delete newVariants[key];
+            setCellVariants(newVariants);
+          }
+          setVariantModalOpen(false);
+        }}
+        cellVariants={cellVariants}
+        setCellVariants={setCellVariants}
+        showToast={showToast}
+      />
 
       {/* Quick Input Modal */}
       {quickInputModalOpen && (
