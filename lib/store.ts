@@ -27,6 +27,7 @@ interface AuthState {
   register: (username: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   updateSettings: (settings: Partial<User['settings']>) => Promise<void>;
+  isAdmin: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -90,6 +91,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     };
     localStorage.setItem('nlk_current_user', JSON.stringify(updatedUser));
     set({ user: updatedUser });
+  },
+  
+  isAdmin: () => {
+    const user = get().user;
+    return user?.uid === 'admin_123' || user?.email === 'admin@nlk.ru';
   },
 }));
 
