@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useDictionariesStore, useEditorStore } from '@/lib/store';
+import { useDictionariesStore, useEditorStore, useAuthStore } from '@/lib/store';
 
 interface DictListModalProps {
   isOpen: boolean;
@@ -36,8 +36,11 @@ export default function DictListModal({ isOpen, onClose, showToast, onEditWord }
   );
 
   const handleEditWord = (word: WordToEdit) => {
-    if (!currentDict || currentDict.isDefault) {
-      showToast('Нельзя редактировать базовый словарь', true);
+    if (!currentDict) return;
+    
+    // Защита базовых словарей для обычных пользователей
+    if (currentDict.isDefault && !useAuthStore.getState().isAdmin()) {
+      showToast('Базовые словари может редактировать только администратор', true);
       return;
     }
     
@@ -61,8 +64,9 @@ export default function DictListModal({ isOpen, onClose, showToast, onEditWord }
   const handleDeleteWord = async (wordId: string, wordText: string) => {
     if (!currentDict) return;
     
-    if (currentDict.isDefault) {
-      showToast('Нельзя редактировать базовый словарь', true);
+    // Защита базовых словарей для обычных пользователей
+    if (currentDict.isDefault && !useAuthStore.getState().isAdmin()) {
+      showToast('Базовые словари может редактировать только администратор', true);
       return;
     }
     
