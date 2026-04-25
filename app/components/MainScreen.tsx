@@ -85,6 +85,12 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     
     const dict = dictionaries[index];
     
+    // Защита базовых словарей
+    if (dict?.isDefault && !useAuthStore.getState().isAdmin()) {
+      showToast('Базовые словари может редактировать только администратор', true);
+      return;
+    }
+    
     // Если словаря+ нет - создаём его
     if (!dict.plusDictionary) {
       useDictionariesStore.getState().updateDictionary(dict.id, {
@@ -135,6 +141,14 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
 
   const handleEditDictionary = (index: number, e: React.MouseEvent) => {
     e.stopPropagation();
+    const dict = dictionaries[index];
+    
+    // Защита базовых словарей
+    if (dict?.isDefault && !useAuthStore.getState().isAdmin()) {
+      showToast('Базовые словари может редактировать только администратор', true);
+      return;
+    }
+    
     setCurrentDict(index);
     onNavigate('editor', index);
   };
@@ -144,8 +158,8 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     const dict = dictionaries[index];
     
     // Защита базовых словарей
-    if (dict?.isDefault) {
-      showToast('Нельзя удалить базовый словарь', true);
+    if (dict?.isDefault && !useAuthStore.getState().isAdmin()) {
+      showToast('Базовые словари может редактировать только администратор', true);
       return;
     }
     
