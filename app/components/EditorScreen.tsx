@@ -522,6 +522,13 @@ if (e.shiftKey) {
       showToast('Ошибка: не удалось получить ID словаря', true);
       return;
     }
+    
+    // Check if dictionary is default and user is not admin
+    const dict = dictionaries.find(d => d.id === dictId);
+    if (dict?.isDefault && !useAuthStore.getState().isAdmin()) {
+      showToast('Базовые словари может редактировать только администратор', true);
+      return;
+    }
 
     useEditorStore.setState({ currentWord: word, cellVariants, mergedCells, plusCells });
     const editingId = useEditorStore.getState().editingWordId;
