@@ -20,6 +20,9 @@ export default function RootLayout({
   if (!isInitialized) {
     return (
       <html lang="ru">
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        </head>
         <body>
           <div className="loading-screen">
             <div className="spinner"></div>
@@ -31,6 +34,9 @@ export default function RootLayout({
 
   return (
     <html lang="ru">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </head>
       <body>
         <OnlineStatusProvider>
           {children}
