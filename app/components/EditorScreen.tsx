@@ -372,7 +372,6 @@ if (e.shiftKey) {
     setVariantModalCellIndex(index);
     setVariantModalOpen(true);
     
-    // Initialize with correct variant
     const text = currentWord;
     let correctVariant = '';
     
@@ -387,13 +386,28 @@ if (e.shiftKey) {
       }
     }
 
-    const key = isPlus ? `+${index}` : index;
-    if (!cellVariants[key] || cellVariants[key].length === 0) {
-      setCellVariants({ ...cellVariants, [key]: [correctVariant] });
-    } else if (cellVariants[key][0] !== correctVariant) {
-      const newVariants = { ...cellVariants };
-      newVariants[key] = [correctVariant, ...cellVariants[key]];
-      setCellVariants(newVariants);
+    const key = isPlus ? `+${index}` : index.toString();
+    
+    // For merged cells, collect variants from all positions
+    const pair = mergedCells.find(p => p.start === index);
+    if (pair) {
+      const mergedVariants = getAllVariantsForMerge(pair);
+      if (mergedVariants.length > 0) {
+        // Ensure correct variant is first
+        const withoutCorrect = mergedVariants.filter(v => v.toLowerCase() !== correctVariant.toLowerCase());
+        setCellVariants({ ...cellVariants, [key]: [correctVariant, ...withoutCorrect] });
+      } else {
+        setCellVariants({ ...cellVariants, [key]: [correctVariant] });
+      }
+    } else {
+      // Regular cell
+      if (!cellVariants[key] || cellVariants[key].length === 0) {
+        setCellVariants({ ...cellVariants, [key]: [correctVariant] });
+      } else if (cellVariants[key][0] !== correctVariant) {
+        const newVariants = { ...cellVariants };
+        newVariants[key] = [correctVariant, ...cellVariants[key]];
+        setCellVariants(newVariants);
+      }
     }
   };
 
