@@ -25,7 +25,9 @@ export default function VariantModal({
   
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const cellIndex = externalCellIndex !== undefined ? externalCellIndex : internalCellIndex;
-  const variants = internalVariants;
+  const variants = externalCellVariants && cellIndex !== undefined 
+    ? externalCellVariants[cellIndex.toString()] || internalVariants 
+    : internalVariants;
   
   const setIsOpen = (open: boolean) => {
     if (externalIsOpen === undefined) {
