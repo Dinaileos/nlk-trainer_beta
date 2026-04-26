@@ -158,12 +158,15 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     const dict = dictionaries[index];
     
     // Защита базовых словарей
-    if (dict?.isDefault && !useAuthStore.getState().isAdmin()) {
-      showToast('Базовые словари может редактировать только администратор', true);
-      return;
-    }
-    
-    if (confirm(`Удалить словарь "${dictionaries[index].name}"?`)) {
+    if (dict?.isDefault) {
+      if (!useAuthStore.getState().isAdmin()) {
+        showToast('Базовые словари может редактировать только администратор', true);
+        return;
+      }
+      if (!confirm('Вы уверены, что хотите удалить базовый словарь? Это действие нельзя отменить.')) {
+        return;
+      }
+    } else if (confirm(`Удалить словарь "${dictionaries[index].name}"?`)) {
       useDictionariesStore.getState().deleteDictionary(dictionaries[index].id);
       showToast('Словарь удалён');
     }
