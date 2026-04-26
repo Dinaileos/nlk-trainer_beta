@@ -128,7 +128,7 @@ export default function VariantModal({
         <button className="modal-close-icon" onClick={close}>×</button>
         <div className="modal-title">Варианты ответа</div>
         <div className="modal-cell-content">
-          <span className="cell-letter">?</span>
+          <span className="cell-letter">{variants.length > 0 ? variants[0] : '?'}</span>
         </div>
         
         {variants.length < 3 && (
