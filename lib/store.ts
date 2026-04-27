@@ -13,6 +13,7 @@ import {
 import * as authLib from '@/lib/auth';
 import * as db from '@/lib/database';
 import * as sync from '@/lib/syncService';
+import { getDefaultDictionariesHardcoded } from '@/lib/database';
 
 // ============ AUTH STORE ============
 
@@ -128,15 +129,48 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
     
     const isDemoUser = user?.uid?.startsWith('demo_') || !user;
     
-    // РџРѕРєР°Р·С‹РІР°РµРј РєРµС€ Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№ СЃСЂР°Р·Сѓ
-    const cachedDefaults = localStorage.getItem('nlk_default_dictionaries');
-    if (cachedDefaults) {
-      try {
-        set({ defaultDictionaries: JSON.parse(cachedDefaults) });
-      } catch (e) {
-        console.error('loadDictionaries: failed to parse cached defaults', e);
+    // Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј Рё РґРµРґСѓРїР»РёС†РёСЂСѓРµРј Р±Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё
+    const restoreAndDedupeDefaults = () => {
+      const stored = localStorage.getItem('nlk_default_dictionaries');
+      let defaults: Dictionary[] = [];
+      
+      if (stored) {
+        try {
+          defaults = JSON.parse(stored);
+        } catch (e) {
+          console.error('loadDictionaries: failed to parse stored defaults', e);
+        }
       }
-    }
+      
+      // РџРѕР»СѓС‡Р°РµРј hardcoded СЃР»РѕРІР°СЂРё
+      const hardcoded = getDefaultDictionariesHardcoded();
+      
+      // Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‰РёРµ Р±Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё
+      const hardcodedNames = hardcoded.map(d => d.name);
+      const existingNames = defaults.map(d => d.name);
+      
+      for (const h of hardcoded) {
+        if (!existingNames.includes(h.name)) {
+          defaults.push(h);
+        }
+      }
+      
+      // РЈРґР°Р»СЏРµРј РґСѓР±Р»РёРєР°С‚С‹ РїРѕ РЅР°Р·РІР°РЅРёСЋ (РѕСЃС‚Р°РІР»СЏРµРј РїРµСЂРІС‹Р№)
+      const seen = new Set<string>();
+      const deduped: Dictionary[] = [];
+      for (const d of defaults) {
+        if (!seen.has(d.name)) {
+          seen.add(d.name);
+          deduped.push(d);
+        }
+      }
+      
+      localStorage.setItem('nlk_default_dictionaries', JSON.stringify(deduped));
+      return deduped;
+    };
+    
+    const restoredDefaults = restoreAndDedupeDefaults();
+    set({ defaultDictionaries: restoredDefaults });
     
     if (isDemoUser) {
       try {
