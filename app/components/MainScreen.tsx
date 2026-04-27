@@ -246,7 +246,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     localStorage.setItem('nlk_default_dictionaries', JSON.stringify(filtered));
     loadDictionaries();
     showToast('Р‘Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ СѓРґР°Р»С‘РЅ');
-  }
+  };
 
   return (
     <div className="screen active" id="mainScreen">
