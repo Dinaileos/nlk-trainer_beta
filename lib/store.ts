@@ -84,7 +84,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const user = useAuthStore.getState().user;
     if (!user) return;
     
-    // Демо режим - просто обновляем локально
+    // Р”РµРјРѕ СЂРµР¶РёРј - РїСЂРѕСЃС‚Рѕ РѕР±РЅРѕРІР»СЏРµРј Р»РѕРєР°Р»СЊРЅРѕ
     const updatedUser = {
       ...user,
       settings: { ...user.settings, ...settings },
@@ -95,7 +95,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   
   isAdmin: () => {
     const user = get().user;
-    return user?.uid === 'admin_123' || user?.email === 'admin@nlk.ru';
+    return user?.uid === 'admin_123';
   },
 }));
 
@@ -128,7 +128,7 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
     
     const isDemoUser = user?.uid?.startsWith('demo_') || !user;
     
-    // Показываем кеш базовых словарей сразу
+    // РџРѕРєР°Р·С‹РІР°РµРј РєРµС€ Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№ СЃСЂР°Р·Сѓ
     const cachedDefaults = localStorage.getItem('nlk_default_dictionaries');
     if (cachedDefaults) {
       try {
@@ -145,7 +145,7 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
       } catch (e) {
         console.error('loadDictionaries: failed to parse demo dictionaries', e);
       }
-      // Проверяем обновления базовых словарей в фоне
+      // РџСЂРѕРІРµСЂСЏРµРј РѕР±РЅРѕРІР»РµРЅРёСЏ Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№ РІ С„РѕРЅРµ
       try {
         const defaultDicts = await db.getDefaultDictionaries();
         set({ defaultDictionaries: defaultDicts });
@@ -166,7 +166,7 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
       set({ dictionaries: localDicts });
     }
     
-    // Проверяем обновления базовых словарей в фоне
+    // РџСЂРѕРІРµСЂСЏРµРј РѕР±РЅРѕРІР»РµРЅРёСЏ Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№ РІ С„РѕРЅРµ
     try {
       const defaultDicts = await db.getDefaultDictionaries();
       set({ defaultDictionaries: defaultDicts });
@@ -193,7 +193,7 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
       
       const newDict = {
         id: 'dict_' + Date.now(),
-        name: name || 'Новый словарь',
+        name: name || 'РќРѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ',
         userId: userId || 'demo',
         words: [],
         isDefault: false,
@@ -236,19 +236,19 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
   deleteDictionary: async (dictId) => {
     const user = useAuthStore.getState().user;
     
-    // Demo mode - используем localStorage для demo пользователей
+    // Demo mode - РёСЃРїРѕР»СЊР·СѓРµРј localStorage РґР»СЏ demo РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
     if (!user || user.uid.startsWith('demo_')) {
       const demoDicts = JSON.parse(localStorage.getItem('nlk_demo_dictionaries') || '[]');
       const dictToDelete = demoDicts.find((d: any) => d.id === dictId);
       
-      // Защита базовых словарей
+      // Р—Р°С‰РёС‚Р° Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№
       if (dictToDelete?.isDefault) {
         return;
       }
       
       const filtered = demoDicts.filter((d: any) => d.id !== dictId);
       localStorage.setItem('nlk_demo_dictionaries', JSON.stringify(filtered));
-      // Обновляем напрямую
+      // РћР±РЅРѕРІР»СЏРµРј РЅР°РїСЂСЏРјСѓСЋ
       set({ dictionaries: filtered });
       return;
     }
@@ -267,7 +267,7 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
       if (dict) {
         dict.words = dict.words.filter((w: any) => w.id !== wordId);
         
-        // Если словарь пуст - удалить
+        // Р•СЃР»Рё СЃР»РѕРІР°СЂСЊ РїСѓСЃС‚ - СѓРґР°Р»РёС‚СЊ
         if (dict.words.length === 0) {
           const filtered = demoDicts.filter((d: any) => d.id !== dictId);
           localStorage.setItem('nlk_demo_dictionaries', JSON.stringify(filtered));
@@ -338,15 +338,58 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
     const { currentWord, cellVariants, mergedCells, plusCells } = get();
     
     if (!currentWord) {
-      return { success: false, error: 'Введите слово' };
+      return { success: false, error: 'Р’РІРµРґРёС‚Рµ СЃР»РѕРІРѕ' };
     }
     
     const isEditing = !!editingWordId;
     
+    // РџСЂРѕРІРµСЂСЏРµРј, СЌС‚Рѕ Р±Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ (РЅР°С‡РёРЅР°РµС‚СЃСЏ СЃ default_)
+    const isDefaultDict = dictId.startsWith('default_');
+    
     // Check if demo user (uid starts with demo_)
     const isDemoUser = user?.uid?.startsWith('demo_') || !user;
     
-try {
+    try {
+      if (isDefaultDict) {
+        // Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№ (СЃРѕС…СЂР°РЅСЏРµРј РІ localStorage)
+        const defaultDicts = JSON.parse(localStorage.getItem('nlk_default_dictionaries') || '[]');
+        const dictIndex = defaultDicts.findIndex((d: any) => d.id === dictId);
+        
+        if (dictIndex < 0) {
+          return { success: false, error: 'РЎР»РѕРІР°СЂСЊ РЅРµ РЅР°Р№РґРµРЅ' };
+        }
+        
+        if (isEditing) {
+          const wordIndex = defaultDicts[dictIndex].words.findIndex((w: any) => w.id === editingWordId);
+          if (wordIndex >= 0) {
+            defaultDicts[dictIndex].words[wordIndex] = {
+              ...defaultDicts[dictIndex].words[wordIndex],
+              word: currentWord,
+              variants: cellVariants,
+              merges: mergedCells,
+              plusCells: plusCells,
+            };
+          }
+        } else {
+          const wordId = 'word_' + Date.now();
+          const wordData = {
+            id: wordId,
+            word: currentWord,
+            variants: cellVariants,
+            merges: mergedCells,
+            plusCells: plusCells,
+            gamesHistory: [],
+            wordErrors: {},
+          };
+          defaultDicts[dictIndex].words.push(wordData);
+        }
+        
+        localStorage.setItem('nlk_default_dictionaries', JSON.stringify(defaultDicts));
+        await useDictionariesStore.getState().loadDictionaries();
+        get().clearEditor();
+        return { success: true };
+      }
+      
       if (isDemoUser) {
         const demoDicts = JSON.parse(localStorage.getItem('nlk_demo_dictionaries') || '[]');
         let dict = demoDicts.find((d: any) => d.id === dictId);
@@ -354,7 +397,7 @@ try {
         if (!dict && !isEditing) {
           dict = {
             id: dictId,
-            name: 'Мой словарь',
+            name: 'РњРѕР№ СЃР»РѕРІР°СЂСЊ',
             userId: 'demo',
             words: [],
             createdAt: Date.now(),
@@ -394,16 +437,16 @@ try {
       
       // Real Firebase user
       if (!user) {
-        return { success: false, error: 'Ошибка сохранения' };
+        return { success: false, error: 'РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ' };
       }
       
-      // Проверяем лимит слов (только для новых слов)
+      // РџСЂРѕРІРµСЂСЏРµРј Р»РёРјРёС‚ СЃР»РѕРІ (С‚РѕР»СЊРєРѕ РґР»СЏ РЅРѕРІС‹С… СЃР»РѕРІ)
       if (!isEditing) {
         const dict = useDictionariesStore.getState().dictionaries.find(d => d.id === dictId);
         const wordCount = dict?.words?.length || 0;
         
         if (wordCount >= MAX_WORDS_PER_DICTIONARY) {
-          return { success: false, error: `Максимум ${MAX_WORDS_PER_DICTIONARY} слов` };
+          return { success: false, error: `РњР°РєСЃРёРјСѓРј ${MAX_WORDS_PER_DICTIONARY} СЃР»РѕРІ` };
         }
       }
       
@@ -433,7 +476,7 @@ try {
       return { success: false, error: result.error };
     } catch (e) {
       console.error('saveWord: failed to save word', e);
-      return { success: false, error: 'Ошибка сохранения' };
+      return { success: false, error: 'РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ' };
     }
   },
 }));
@@ -460,7 +503,7 @@ export const useExerciseStore = create<ExerciseStoreState>((set, get) => ({
   startExercise: (dictId) => {
     const { dictionaries, defaultDictionaries } = useDictionariesStore.getState();
     
-    // Ищем словарь
+    // РС‰РµРј СЃР»РѕРІР°СЂСЊ
     let dict = dictionaries.find(d => d.id === dictId);
     let allDicts = [...defaultDictionaries, ...dictionaries];
     
@@ -473,7 +516,7 @@ export const useExerciseStore = create<ExerciseStoreState>((set, get) => ({
     const dictIndex = allDicts.findIndex(d => d.id === dictId);
     const words = [...(dict.words || [])];
     
-    // Фильтруем неизученные слова
+    // Р¤РёР»СЊС‚СЂСѓРµРј РЅРµРёР·СѓС‡РµРЅРЅС‹Рµ СЃР»РѕРІР°
     const unlearnedWords = words.filter(w => {
       const correctCount = w.gamesHistory?.filter(g => g.errors === 0).length || 0;
       return correctCount < 3;
@@ -495,7 +538,7 @@ export const useExerciseStore = create<ExerciseStoreState>((set, get) => ({
     const nextIndex = exerciseCurrentIndex + 1;
     
     if (nextIndex >= exerciseWords.length) {
-      // Все слова пройдены
+      // Р’СЃРµ СЃР»РѕРІР° РїСЂРѕР№РґРµРЅС‹
       set({ exerciseCurrentIndex: exerciseWords.length });
       return;
     }
@@ -527,10 +570,10 @@ export const useExerciseStore = create<ExerciseStoreState>((set, get) => ({
     
     if (!dict) return;
     
-    // Подсчитываем результаты
-    // (упрощенная версия - в реальном приложении нужно считать ошибки по сегментам)
+    // РџРѕРґСЃС‡РёС‚С‹РІР°РµРј СЂРµР·СѓР»СЊС‚Р°С‚С‹
+    // (СѓРїСЂРѕС‰РµРЅРЅР°СЏ РІРµСЂСЃРёСЏ - РІ СЂРµР°Р»СЊРЅРѕРј РїСЂРёР»РѕР¶РµРЅРёРё РЅСѓР¶РЅРѕ СЃС‡РёС‚Р°С‚СЊ РѕС€РёР±РєРё РїРѕ СЃРµРіРјРµРЅС‚Р°Рј)
     const gameResult = {
-      errors: 0, // TODO: подсчитать ошибки
+      errors: 0, // TODO: РїРѕРґСЃС‡РёС‚Р°С‚СЊ РѕС€РёР±РєРё
       totalSegments: exerciseWords.reduce((sum, w) => sum + w.word.length, 0),
       correctSegments: 0,
     };
