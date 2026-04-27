@@ -44,7 +44,6 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
       return;
     }
     
-    // РџСЂРѕРІРµСЂРєР° СѓРЅРёРєР°Р»СЊРЅРѕСЃС‚Рё
     const nameLower = name.toLowerCase();
     const exists = dictionaries.some(d => d.name.toLowerCase() === nameLower);
     if (exists) {
@@ -69,13 +68,92 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     setNewDefaultDictModalOpen(true);
   };
 
+  const handleRestoreDefaultDicts = () => {
+    if (!confirm('Р’РѕСЃСЃС‚Р°РЅРѕРІРёС‚СЊ Р±Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё (еёёз”ЁиЇЌ, Р§Р°СЃС‚С‹Рµ РѕС€РёР±РєРё)? РЎСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ СЃР»РѕРІР°СЂРё СЃ С‚Р°РєРёРјРё РЅР°Р·РІР°РЅРёСЏРјРё РЅРµ Р±СѓРґСѓС‚ РїРµСЂРµР·Р°РїРёСЃР°РЅС‹.')) {
+      return;
+    }
+    
+    const stored = localStorage.getItem('nlk_default_dictionaries');
+    let defaults: any[] = [];
+    
+    if (stored) {
+      try {
+        defaults = JSON.parse(stored);
+      } catch (e) {
+        console.error('Failed to parse stored defaults', e);
+      }
+    }
+    
+    const hardcoded = [
+      {
+        id: 'default_1',
+        name: 'еёёз”ЁиЇЌ',
+        userId: 'system',
+        isDefault: true,
+        words: [
+          { id: '1', word: 'РїСЂРёРІРµС‚', variants: {}, merges: [], gamesHistory: [], wordErrors: {} },
+          { id: '2', word: 'РїРѕРєР°', variants: {}, merges: [], gamesHistory: [], wordErrors: {} },
+          { id: '3', word: 'СЃРїР°СЃРёР±Рѕ', variants: {}, merges: [], gamesHistory: [], wordErrors: {} },
+          { id: '4', word: 'РїРѕР¶Р°Р»СѓР№СЃС‚Р°', variants: {}, merges: [], gamesHistory: [], wordErrors: {} },
+          { id: '5', word: 'РёР·РІРёРЅРёС‚Рµ', variants: {}, merges: [], gamesHistory: [], wordErrors: {} },
+        ],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+      {
+        id: 'default_2',
+        name: 'Р§Р°СЃС‚С‹Рµ РѕС€РёР±РєРё',
+        userId: 'system',
+        isDefault: true,
+        words: [
+          { id: '6', word: 'РєРѕС„РµС‘Р¶РєР°', variants: {}, merges: [{ start: 2, end: 3 }], gamesHistory: [], wordErrors: {} },
+          { id: '7', word: 'РѕРґРЅР°РєРѕ', variants: { 4: ['РЅР°РєРѕ', 'РґРЅР°РєРѕ'] }, merges: [], gamesHistory: [], wordErrors: {} },
+          { id: '8', word: 'Р·Р°РІРёСЃРёС‚', variants: { 7: ['РёС‚', 'РµС‚'] }, merges: [], gamesHistory: [], wordErrors: {} },
+          { id: '9', word: 'РєСЂР°СЃРёРІРµРµ', variants: { 8: ['РµР№', 'РµРµ'] }, merges: [], gamesHistory: [], wordErrors: {} },
+          { id: '10', word: 'Р·РІРѕРЅРёС‚', variants: { 5: ['РёС‚', 'РёС‚'] }, merges: [], gamesHistory: [], wordErrors: {} },
+        ],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+    ];
+    
+    const existingNames = defaults.map((d: any) => d.name);
+    let addedCount = 0;
+    
+    for (const h of hardcoded) {
+      if (!existingNames.includes(h.name)) {
+        defaults.push(h);
+        addedCount++;
+      }
+    }
+    
+    localStorage.setItem('nlk_default_dictionaries', JSON.stringify(defaults));
+    loadDictionaries();
+    
+    if (addedCount > 0) {
+      showToast(`Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРѕ ${addedCount} Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№`);
+    } else {
+      showToast('Р‘Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓСЋС‚');
+    }
+  };
+
   const handleCreateDefaultDictSubmit = () => {
     const name = newDefaultDictName.trim();
     if (!name) {
       showToast('Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ СЃР»РѕРІР°СЂСЏ', true);
       return;
     }
+  
+    const defaultDicts = JSON.parse(localStorage.getItem('nlk_default_dictionaries') || '[]');
     
+    // Check for duplicates
+    const nameLower = name.toLowerCase();
+    const exists = defaultDicts.some((d: any) => d.name.toLowerCase() === nameLower);
+    if (exists) {
+      showToast('Р‘Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ СЃ С‚Р°РєРёРј РЅР°Р·РІР°РЅРёРµРј СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚', true);
+      return;
+    }
+  
     const newDict = {
       id: 'default_' + Date.now(),
       name: name,
@@ -85,14 +163,12 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    
-    const defaultDicts = JSON.parse(localStorage.getItem('nlk_default_dictionaries') || '[]');
+  
     defaultDicts.push(newDict);
     localStorage.setItem('nlk_default_dictionaries', JSON.stringify(defaultDicts));
     
-    // РћР±РЅРѕРІР»СЏРµРј store
-    const { set } = useDictionariesStore.getState();
-    set({ defaultDictionaries: defaultDicts });
+    // Properly update store
+    loadDictionaries();
     
     setNewDefaultDictModalOpen(false);
     setNewDefaultDictName('');
@@ -122,13 +198,11 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     
     const dict = dictionaries[index];
     
-    // Р—Р°С‰РёС‚Р° Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№
     if (dict?.isDefault && !useAuthStore.getState().isAdmin()) {
       showToast('Р‘Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё РјРѕР¶РµС‚ СЂРµРґР°РєС‚РёСЂРѕРІР°С‚СЊ С‚РѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ', true);
       return;
     }
     
-    // Р•СЃР»Рё СЃР»РѕРІР°СЂСЏ+ РЅРµС‚ - СЃРѕР·РґР°С‘Рј РµРіРѕ
     if (!dict.plusDictionary) {
       useDictionariesStore.getState().updateDictionary(dict.id, {
         plusDictionary: {
@@ -180,7 +254,6 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     e.stopPropagation();
     const dict = dictionaries[index];
     
-    // Р—Р°С‰РёС‚Р° Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№
     if (dict?.isDefault && !useAuthStore.getState().isAdmin()) {
       showToast('Р‘Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё РјРѕР¶РµС‚ СЂРµРґР°РєС‚РёСЂРѕРІР°С‚СЊ С‚РѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ', true);
       return;
@@ -194,7 +267,6 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     e.stopPropagation();
     const dict = dictionaries[index];
     
-    // Р—Р°С‰РёС‚Р° Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№
     if (dict?.isDefault) {
       if (!useAuthStore.getState().isAdmin()) {
         showToast('Р‘Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё РјРѕР¶РµС‚ СЂРµРґР°РєС‚РёСЂРѕРІР°С‚СЊ С‚РѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ', true);
@@ -203,6 +275,12 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
       if (!confirm('Р’С‹ СѓРІРµСЂРµРЅС‹, С‡С‚Рѕ С…РѕС‚РёС‚Рµ СѓРґР°Р»РёС‚СЊ Р±Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ? Р­С‚Рѕ РґРµР№СЃС‚РІРёРµ РЅРµР»СЊР·СЏ РѕС‚РјРµРЅРёС‚СЊ.')) {
         return;
       }
+      // Delete from localStorage
+      const defaultDicts = JSON.parse(localStorage.getItem('nlk_default_dictionaries') || '[]');
+      const filtered = defaultDicts.filter((d: any) => d.id !== dict.id);
+      localStorage.setItem('nlk_default_dictionaries', JSON.stringify(filtered));
+      loadDictionaries();
+      showToast('Р‘Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ СѓРґР°Р»С‘РЅ');
     } else if (confirm(`РЈРґР°Р»РёС‚СЊ СЃР»РѕРІР°СЂСЊ "${dictionaries[index].name}"?`)) {
       useDictionariesStore.getState().deleteDictionary(dictionaries[index].id);
       showToast('РЎР»РѕРІР°СЂСЊ СѓРґР°Р»С‘РЅ');
@@ -229,7 +307,11 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     if (!confirm('Р’С‹ СѓРІРµСЂРµРЅС‹, С‡С‚Рѕ С…РѕС‚РёС‚Рµ СѓРґР°Р»РёС‚СЊ Р±Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ? Р­С‚Рѕ РґРµР№СЃС‚РІРёРµ РЅРµР»СЊР·СЏ РѕС‚РјРµРЅРёС‚СЊ.')) {
       return;
     }
-    useDictionariesStore.getState().deleteDictionary(dict.id);
+    // Delete from localStorage
+    const defaultDicts = JSON.parse(localStorage.getItem('nlk_default_dictionaries') || '[]');
+    const filtered = defaultDicts.filter((d: any) => d.id !== dict.id);
+    localStorage.setItem('nlk_default_dictionaries', JSON.stringify(filtered));
+    loadDictionaries();
     showToast('Р‘Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ СѓРґР°Р»С‘РЅ');
   };
 
@@ -262,22 +344,20 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
           const hasErrors = wordErrorsCount > 0;
           const hasPlus = dict.plusDictionary?.words && dict.plusDictionary.words.length > 0;
           const isFlipped = flippedCards.has(idx);
-// Load stats for record
           const localStats = storage.getStats(dict.id);
           let record = '-';
           if (localStats.games && localStats.games.length > 0) {
             const errors = localStats.games.map((g: any) => g.errors);
             record = Math.min(...errors) === 0 ? '0' : String(Math.min(...errors));
           }
-          
-          // For dictionaries without plus, calculate record directly
+           
           let recForNoPlus = record;
-
-if (hasPlus) {
+          
+          if (hasPlus) {
             return (
               <div key={dict.id} className="dict-card-flip-wrapper" style={{ perspective: '1000px', width: '200px', height: '180px' }}>
                 <div 
-                  style={{ 
+                  style={{
                     width: '100%', 
                     height: '100%', 
                     transition: 'transform 0.6s',
@@ -307,25 +387,7 @@ if (hasPlus) {
                   >
                     <div className="dict-card-title">{dict.name}</div>
                     <div className="dict-card-count">{dict.words.length} СЃР»РѕРІ</div>
-                    <div className="dict-card-record">
-                      {record === '-' ? 'Р РµРєРѕСЂРґ: -' : record === '0' ? <span style={{ color: '#FFD700', fontWeight: 'bold' }}>РРґРµР°Р»СЊРЅРѕ</span> : `Р РµРєРѕСЂРґ: ${record}`}
-                    </div>
-                    {hasErrors && (
-                      <div style={{ color: '#f5a623', fontSize: '12px' }}>
-                        {wordErrorsCount} РѕС€РёР±РѕРє
-                      </div>
-                    )}
-                    <button 
-                      className="flip-btn"
-                      onClick={(e) => handlePlusCardClick(idx, e)}
-                      title="РћС‚РєСЂС‹С‚СЊ СЃР»РѕРІР°СЂСЊ+"
-                    >
-                      в†»
-                    </button>
-                    <div style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', gap: '4px' }}>
-                      <button className="dict-card-btn-small edit" onClick={(e) => handleEditDictionary(idx, e)} title="РР·РјРµРЅРёС‚СЊ" />
-                      <button className="dict-card-btn-small delete" onClick={(e) => handleDeleteDictionary(idx, e)} title="РЈРґР°Р»РёС‚СЊ" />
-                    </div>
+                    {recForNoPlus === '-' ? 'Р РµРєРѕСЂРґ: -' : recForNoPlus === '0' ? <span style={{ color: '#FFD700', fontWeight: 'bold' }}>РРґРµР°Р»СЊРЅРѕ</span> : `Р РµРєРѕСЂРґ: ${recForNoPlus}`}
                   </div>
                   <div 
                     style={{
@@ -336,14 +398,13 @@ if (hasPlus) {
                       height: '180px',
                       backfaceVisibility: 'hidden',
                       background: 'var(--bg-surface)',
-                      border: '2px solid #f5a623',
+                      border: '2px solid var(--border-gray)',
                       borderRadius: '8px',
                       padding: '16px',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      transform: 'rotateY(180deg)'
                     }}
                     onClick={() => { storage.setCurrentMode('plus'); setCurrentDict(idx); onNavigate('exercise', idx); }}
                   >
@@ -351,7 +412,7 @@ if (hasPlus) {
                     <div className="dict-card-count">{dict.plusDictionary?.words.length || 0} СЃР»РѕРІ</div>
                     {dict.plusDictionary?.gamesHistory && dict.plusDictionary.gamesHistory.length > 0 && (
                       (() => {
-                        const errors = dict.plusDictionary.gamesHistory.map((g: any) => g.errors || 0);
+                        const errors = dict.plusDictionary!.gamesHistory.map((g: any) => g.errors || 0);
                         const minErrors = Math.min(...errors);
                         return <div className="dict-card-record">
                           {minErrors === 0 ? <span style={{ color: '#FFD700', fontWeight: 'bold' }}>РРґРµР°Р»СЊРЅРѕ</span> : `Р РµРєРѕСЂРґ: ${minErrors}`}
@@ -435,6 +496,18 @@ if (hasPlus) {
           >
             <div className="add-icon">+</div>
             <div className="add-text">Р”РѕР±Р°РІРёС‚СЊ Р±Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ</div>
+          </div>
+        )}
+
+        {/* Restore default dictionaries button (admin only) */}
+        {isAdmin && (
+          <div 
+            className="dict-card add-card"
+            style={{ border: '2px dashed #f5a623' }}
+            onClick={handleRestoreDefaultDicts}
+          >
+            <div className="add-icon" style={{ color: '#f5a623' }}>в†є</div>
+            <div className="add-text">Р’РѕСЃСЃС‚Р°РЅРѕРІРёС‚СЊ Р±Р°Р·РѕРІС‹Рµ</div>
           </div>
         )}
       </div>
