@@ -26,9 +26,12 @@ interface MainScreenProps {
 export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
   const { user } = useAuthStore();
   const { dictionaries, defaultDictionaries, loadDictionaries, setCurrentDict, createDictionary } = useDictionariesStore();
+  const isAdmin = useAuthStore.getState().isAdmin();
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const [newDictModalOpen, setNewDictModalOpen] = useState(false);
   const [newDictName, setNewDictName] = useState('');
+  const [newDefaultDictModalOpen, setNewDefaultDictModalOpen] = useState(false);
+  const [newDefaultDictName, setNewDefaultDictName] = useState('');
 
   useEffect(() => {
     loadDictionaries();
@@ -37,15 +40,15 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
   const handleCreateDict = async () => {
     const name = newDictName.trim();
     if (!name) {
-      showToast('Введите название словаря', true);
+      showToast('Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ СЃР»РѕРІР°СЂСЏ', true);
       return;
     }
     
-    // Проверка уникальности
+    // РџСЂРѕРІРµСЂРєР° СѓРЅРёРєР°Р»СЊРЅРѕСЃС‚Рё
     const nameLower = name.toLowerCase();
     const exists = dictionaries.some(d => d.name.toLowerCase() === nameLower);
     if (exists) {
-      showToast('Словарь с таким названием уже существует', true);
+      showToast('РЎР»РѕРІР°СЂСЊ СЃ С‚Р°РєРёРј РЅР°Р·РІР°РЅРёРµРј СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚', true);
       return;
     }
     
@@ -58,8 +61,42 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
       setCurrentDict(newIndex);
       onNavigate('editor', newIndex);
     } else {
-      showToast('Ошибка создания', true);
+      showToast('РћС€РёР±РєР° СЃРѕР·РґР°РЅРёСЏ', true);
     }
+  };
+
+  const handleCreateDefaultDict = () => {
+    setNewDefaultDictModalOpen(true);
+  };
+
+  const handleCreateDefaultDictSubmit = () => {
+    const name = newDefaultDictName.trim();
+    if (!name) {
+      showToast('Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ СЃР»РѕРІР°СЂСЏ', true);
+      return;
+    }
+    
+    const newDict = {
+      id: 'default_' + Date.now(),
+      name: name,
+      userId: 'system',
+      isDefault: true,
+      words: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    
+    const defaultDicts = JSON.parse(localStorage.getItem('nlk_default_dictionaries') || '[]');
+    defaultDicts.push(newDict);
+    localStorage.setItem('nlk_default_dictionaries', JSON.stringify(defaultDicts));
+    
+    // РћР±РЅРѕРІР»СЏРµРј store
+    const { set } = useDictionariesStore.getState();
+    set({ defaultDictionaries: defaultDicts });
+    
+    setNewDefaultDictModalOpen(false);
+    setNewDefaultDictName('');
+    showToast('Р‘Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ СЃРѕР·РґР°РЅ');
   };
 
   const handleDefaultDictClick = (index: number) => {
@@ -85,13 +122,13 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     
     const dict = dictionaries[index];
     
-    // Защита базовых словарей
+    // Р—Р°С‰РёС‚Р° Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№
     if (dict?.isDefault && !useAuthStore.getState().isAdmin()) {
-      showToast('Базовые словари может редактировать только администратор', true);
+      showToast('Р‘Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё РјРѕР¶РµС‚ СЂРµРґР°РєС‚РёСЂРѕРІР°С‚СЊ С‚РѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ', true);
       return;
     }
     
-    // Если словаря+ нет - создаём его
+    // Р•СЃР»Рё СЃР»РѕРІР°СЂСЏ+ РЅРµС‚ - СЃРѕР·РґР°С‘Рј РµРіРѕ
     if (!dict.plusDictionary) {
       useDictionariesStore.getState().updateDictionary(dict.id, {
         plusDictionary: {
@@ -101,7 +138,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
           gamesHistory: []
         }
       });
-      showToast('Словарь+ создан');
+      showToast('РЎР»РѕРІР°СЂСЊ+ СЃРѕР·РґР°РЅ');
     }
     
     setFlippedCards(prev => {
@@ -117,7 +154,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
 
   const createNewDictionary = () => {
     if (!user) {
-      showToast('Войдите в аккаунт для создания словарей', true);
+      showToast('Р’РѕР№РґРёС‚Рµ РІ Р°РєРєР°СѓРЅС‚ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ СЃР»РѕРІР°СЂРµР№', true);
       return;
     }
     setNewDictModalOpen(true);
@@ -143,9 +180,9 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     e.stopPropagation();
     const dict = dictionaries[index];
     
-    // Защита базовых словарей
+    // Р—Р°С‰РёС‚Р° Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№
     if (dict?.isDefault && !useAuthStore.getState().isAdmin()) {
-      showToast('Базовые словари может редактировать только администратор', true);
+      showToast('Р‘Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё РјРѕР¶РµС‚ СЂРµРґР°РєС‚РёСЂРѕРІР°С‚СЊ С‚РѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ', true);
       return;
     }
     
@@ -157,19 +194,43 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     e.stopPropagation();
     const dict = dictionaries[index];
     
-    // Защита базовых словарей
+    // Р—Р°С‰РёС‚Р° Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№
     if (dict?.isDefault) {
       if (!useAuthStore.getState().isAdmin()) {
-        showToast('Базовые словари может редактировать только администратор', true);
+        showToast('Р‘Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё РјРѕР¶РµС‚ СЂРµРґР°РєС‚РёСЂРѕРІР°С‚СЊ С‚РѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ', true);
         return;
       }
-      if (!confirm('Вы уверены, что хотите удалить базовый словарь? Это действие нельзя отменить.')) {
+      if (!confirm('Р’С‹ СѓРІРµСЂРµРЅС‹, С‡С‚Рѕ С…РѕС‚РёС‚Рµ СѓРґР°Р»РёС‚СЊ Р±Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ? Р­С‚Рѕ РґРµР№СЃС‚РІРёРµ РЅРµР»СЊР·СЏ РѕС‚РјРµРЅРёС‚СЊ.')) {
         return;
       }
-    } else if (confirm(`Удалить словарь "${dictionaries[index].name}"?`)) {
+    } else if (confirm(`РЈРґР°Р»РёС‚СЊ СЃР»РѕРІР°СЂСЊ "${dictionaries[index].name}"?`)) {
       useDictionariesStore.getState().deleteDictionary(dictionaries[index].id);
-      showToast('Словарь удалён');
+      showToast('РЎР»РѕРІР°СЂСЊ СѓРґР°Р»С‘РЅ');
     }
+  };
+
+  const handleEditDefaultDictionary = (dict: Dictionary, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!useAuthStore.getState().isAdmin()) {
+      showToast('Р‘Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё РјРѕР¶РµС‚ СЂРµРґР°РєС‚РёСЂРѕРІР°С‚СЊ С‚РѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ', true);
+      return;
+    }
+    const idx = defaultDictionaries.findIndex(d => d.id === dict.id);
+    setCurrentDict(-1 - idx);
+    onNavigate('editor', -1 - idx);
+  };
+
+  const handleDeleteDefaultDictionary = (dict: Dictionary, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!useAuthStore.getState().isAdmin()) {
+      showToast('Р‘Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё РјРѕР¶РµС‚ СЂРµРґР°РєС‚РёСЂРѕРІР°С‚СЊ С‚РѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ', true);
+      return;
+    }
+    if (!confirm('Р’С‹ СѓРІРµСЂРµРЅС‹, С‡С‚Рѕ С…РѕС‚РёС‚Рµ СѓРґР°Р»РёС‚СЊ Р±Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ? Р­С‚Рѕ РґРµР№СЃС‚РІРёРµ РЅРµР»СЊР·СЏ РѕС‚РјРµРЅРёС‚СЊ.')) {
+      return;
+    }
+    useDictionariesStore.getState().deleteDictionary(dict.id);
+    showToast('Р‘Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ СѓРґР°Р»С‘РЅ');
   };
 
   return (
@@ -183,9 +244,15 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
             style={{ position: 'relative' }}
             onClick={() => handleDefaultDictClick(idx)}
           >
-            <span className="dict-card-label">Базовый</span>
+            <span className="dict-card-label">Р‘Р°Р·РѕРІС‹Р№</span>
             <div className="dict-card-title">{dict.name}</div>
-            <div className="dict-card-count">{dict.words.length} слов</div>
+            <div className="dict-card-count">{dict.words.length} СЃР»РѕРІ</div>
+            {isAdmin && (
+              <div style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', gap: '4px' }}>
+                <button className="dict-card-btn-small edit" onClick={(e) => handleEditDefaultDictionary(dict, e)} title="РР·РјРµРЅРёС‚СЊ" />
+                <button className="dict-card-btn-small delete" onClick={(e) => handleDeleteDefaultDictionary(dict, e)} title="РЈРґР°Р»РёС‚СЊ" />
+              </div>
+            )}
           </div>
         ))}
 
@@ -239,25 +306,25 @@ if (hasPlus) {
                     onClick={() => { storage.setCurrentMode('main'); setCurrentDict(idx); onNavigate('exercise', idx); }}
                   >
                     <div className="dict-card-title">{dict.name}</div>
-                    <div className="dict-card-count">{dict.words.length} слов</div>
+                    <div className="dict-card-count">{dict.words.length} СЃР»РѕРІ</div>
                     <div className="dict-card-record">
-                      {record === '-' ? 'Рекорд: -' : record === '0' ? <span style={{ color: '#FFD700', fontWeight: 'bold' }}>Идеально</span> : `Рекорд: ${record}`}
+                      {record === '-' ? 'Р РµРєРѕСЂРґ: -' : record === '0' ? <span style={{ color: '#FFD700', fontWeight: 'bold' }}>РРґРµР°Р»СЊРЅРѕ</span> : `Р РµРєРѕСЂРґ: ${record}`}
                     </div>
                     {hasErrors && (
                       <div style={{ color: '#f5a623', fontSize: '12px' }}>
-                        {wordErrorsCount} ошибок
+                        {wordErrorsCount} РѕС€РёР±РѕРє
                       </div>
                     )}
                     <button 
                       className="flip-btn"
                       onClick={(e) => handlePlusCardClick(idx, e)}
-                      title="Открыть словарь+"
+                      title="РћС‚РєСЂС‹С‚СЊ СЃР»РѕРІР°СЂСЊ+"
                     >
-                      ↻
+                      в†»
                     </button>
                     <div style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', gap: '4px' }}>
-                      <button className="dict-card-btn-small edit" onClick={(e) => handleEditDictionary(idx, e)} title="Изменить" />
-                      <button className="dict-card-btn-small delete" onClick={(e) => handleDeleteDictionary(idx, e)} title="Удалить" />
+                      <button className="dict-card-btn-small edit" onClick={(e) => handleEditDictionary(idx, e)} title="РР·РјРµРЅРёС‚СЊ" />
+                      <button className="dict-card-btn-small delete" onClick={(e) => handleDeleteDictionary(idx, e)} title="РЈРґР°Р»РёС‚СЊ" />
                     </div>
                   </div>
                   <div 
@@ -281,22 +348,22 @@ if (hasPlus) {
                     onClick={() => { storage.setCurrentMode('plus'); setCurrentDict(idx); onNavigate('exercise', idx); }}
                   >
                     <div className="dict-card-title" style={{ color: '#f5a623' }}>{dict.name}+</div>
-                    <div className="dict-card-count">{dict.plusDictionary?.words.length || 0} слов</div>
+                    <div className="dict-card-count">{dict.plusDictionary?.words.length || 0} СЃР»РѕРІ</div>
                     {dict.plusDictionary?.gamesHistory && dict.plusDictionary.gamesHistory.length > 0 && (
                       (() => {
                         const errors = dict.plusDictionary.gamesHistory.map((g: any) => g.errors || 0);
                         const minErrors = Math.min(...errors);
                         return <div className="dict-card-record">
-                          {minErrors === 0 ? <span style={{ color: '#FFD700', fontWeight: 'bold' }}>Идеально</span> : `Рекорд: ${minErrors}`}
+                          {minErrors === 0 ? <span style={{ color: '#FFD700', fontWeight: 'bold' }}>РРґРµР°Р»СЊРЅРѕ</span> : `Р РµРєРѕСЂРґ: ${minErrors}`}
                         </div>;
                       })()
                     )}
                     <button 
                       className="flip-btn"
                       onClick={(e) => handleCardFlip(idx, e)}
-                      title="Назад"
+                      title="РќР°Р·Р°Рґ"
                     >
-                      ←
+                      в†ђ
                     </button>
                   </div>
                 </div>
@@ -312,9 +379,9 @@ if (hasPlus) {
               style={{ position: 'relative' }}
             >
               <div className="dict-card-title">{dict.name}</div>
-              <div className="dict-card-count">{dict.words.length} слов</div>
+              <div className="dict-card-count">{dict.words.length} СЃР»РѕРІ</div>
               <div className="dict-card-record">
-                {recForNoPlus === '-' ? 'Рекорд: -' : recForNoPlus === '0' ? <span style={{ color: '#FFD700', fontWeight: 'bold' }}>Идеально</span> : `Рекорд: ${recForNoPlus}`}
+                {recForNoPlus === '-' ? 'Р РµРєРѕСЂРґ: -' : recForNoPlus === '0' ? <span style={{ color: '#FFD700', fontWeight: 'bold' }}>РРґРµР°Р»СЊРЅРѕ</span> : `Р РµРєРѕСЂРґ: ${recForNoPlus}`}
               </div>
               <div style={{ 
                 position: 'absolute', 
@@ -326,12 +393,12 @@ if (hasPlus) {
                 <button 
                   className="dict-card-btn-small edit" 
                   onClick={(e) => handleEditDictionary(idx, e)}
-                  title="Изменить"
+                  title="РР·РјРµРЅРёС‚СЊ"
                 />
                 <button 
                   className="dict-card-btn-small delete" 
                   onClick={(e) => handleDeleteDictionary(idx, e)}
-                  title="Удалить"
+                  title="РЈРґР°Р»РёС‚СЊ"
                 />
               </div>
             </div>
@@ -342,21 +409,32 @@ if (hasPlus) {
         {user && dictionaries.length < 5 ? (
           <div className="dict-card add-card" onClick={createNewDictionary}>
             <div className="add-icon"></div>
-            <div className="add-text">Добавить словарь</div>
+            <div className="add-text">Р”РѕР±Р°РІРёС‚СЊ СЃР»РѕРІР°СЂСЊ</div>
           </div>
         ) : user ? (
           <div className="dict-card" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
             <div className="add-icon"></div>
-            <div className="add-text">Лимит: максимум 5 словарей</div>
+            <div className="add-text">Р›РёРјРёС‚: РјР°РєСЃРёРјСѓРј 5 СЃР»РѕРІР°СЂРµР№</div>
           </div>
         ) : (
           <div 
             className="dict-card" 
-            onClick={() => showToast('Войдите в аккаунт для создания словарей')}
+            onClick={() => showToast('Р’РѕР№РґРёС‚Рµ РІ Р°РєРєР°СѓРЅС‚ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ СЃР»РѕРІР°СЂРµР№')}
             style={{ opacity: 0.7 }}
           >
             <div className="add-icon"></div>
-            <div className="add-text">Войдите для создания словарей</div>
+            <div className="add-text">Р’РѕР№РґРёС‚Рµ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ СЃР»РѕРІР°СЂРµР№</div>
+          </div>
+        )}
+
+        {/* Add default dictionary card (admin only) */}
+        {isAdmin && (
+          <div 
+            className="dict-card add-card default-add-card"
+            onClick={handleCreateDefaultDict}
+          >
+            <div className="add-icon">+</div>
+            <div className="add-text">Р”РѕР±Р°РІРёС‚СЊ Р±Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ</div>
           </div>
         )}
       </div>
@@ -365,20 +443,43 @@ if (hasPlus) {
       {newDictModalOpen && (
         <div className="modal-overlay active" onClick={() => setNewDictModalOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close-icon" onClick={() => setNewDictModalOpen(false)}>×</button>
-            <div className="modal-title">Название словаря</div>
+            <button className="modal-close-icon" onClick={() => setNewDictModalOpen(false)}>Г—</button>
+            <div className="modal-title">РќР°Р·РІР°РЅРёРµ СЃР»РѕРІР°СЂСЏ</div>
             <input
               type="text"
               className="modal-input"
               value={newDictName}
               onChange={(e) => setNewDictName(e.target.value)}
-              placeholder="Введите название..."
+              placeholder="Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ..."
               autoFocus
               onKeyPress={(e) => e.key === 'Enter' && handleCreateDict()}
             />
             <div className="controls" style={{ gap: '12px', marginTop: '16px' }}>
-              <button className="btn btn-primary" onClick={handleCreateDict}>Создать</button>
-              <button className="btn btn-secondary" onClick={() => setNewDictModalOpen(false)}>Отмена</button>
+              <button className="btn btn-primary" onClick={handleCreateDict}>РЎРѕР·РґР°С‚СЊ</button>
+              <button className="btn btn-secondary" onClick={() => setNewDictModalOpen(false)}>РћС‚РјРµРЅР°</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Default Dictionary Modal */}
+      {newDefaultDictModalOpen && (
+        <div className="modal-overlay active" onClick={() => setNewDefaultDictModalOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-icon" onClick={() => setNewDefaultDictModalOpen(false)}>Г—</button>
+            <div className="modal-title">РќР°Р·РІР°РЅРёРµ Р±Р°Р·РѕРІРѕРіРѕ СЃР»РѕРІР°СЂСЏ</div>
+            <input
+              type="text"
+              className="modal-input"
+              value={newDefaultDictName}
+              onChange={(e) => setNewDefaultDictName(e.target.value)}
+              placeholder="Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ..."
+              autoFocus
+              onKeyPress={(e) => e.key === 'Enter' && handleCreateDefaultDictSubmit()}
+            />
+            <div className="controls" style={{ gap: '12px', marginTop: '16px' }}>
+              <button className="btn btn-primary" onClick={handleCreateDefaultDictSubmit}>РЎРѕР·РґР°С‚СЊ</button>
+              <button className="btn btn-secondary" onClick={() => setNewDefaultDictModalOpen(false)}>РћС‚РјРµРЅР°</button>
             </div>
           </div>
         </div>
