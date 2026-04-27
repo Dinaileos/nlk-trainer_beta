@@ -422,19 +422,15 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
         )}
 
         {/* Add default dictionary card (admin only) */}
-
-        {/* Restore default dictionaries button (admin only) */}
         {isAdmin && (
           <div 
-            className="dict-card add-card"
-            style={{ border: '2px dashed #f5a623' }}
-            onClick={handleRestoreDefaultDicts}
+            className="dict-card add-card default-add-card"
+            onClick={handleCreateDefaultDict}
           >
-            <div className="add-icon" style={{ color: '#f5a623' }}>в†є</div>
-            <div className="add-text">Р’РѕСЃСЃС‚Р°РЅРѕРІРёС‚СЊ Р±Р°Р·РѕРІС‹Рµ</div>
+            <div className="add-icon">+</div>
+            <div className="add-text">Р”РѕР±Р°РІРёС‚СЊ Р±Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ</div>
           </div>
         )}
-      </div>
 
       {/* Create Dictionary Modal */}
       {newDictModalOpen && (
