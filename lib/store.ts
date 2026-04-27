@@ -129,48 +129,30 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
     
     const isDemoUser = user?.uid?.startsWith('demo_') || !user;
     
-    // Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј Рё РґРµРґСѓРїР»РёС†РёСЂСѓРµРј Р±Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё
-    const restoreAndDedupeDefaults = () => {
-      const stored = localStorage.getItem('nlk_default_dictionaries');
-      let defaults: Dictionary[] = [];
-      
-      if (stored) {
-        try {
-          defaults = JSON.parse(stored);
-        } catch (e) {
-          console.error('loadDictionaries: failed to parse stored defaults', e);
-        }
-      }
-      
-      // РџРѕР»СѓС‡Р°РµРј hardcoded СЃР»РѕРІР°СЂРё
-      const hardcoded = getDefaultDictionariesHardcoded();
-      
-      // Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‰РёРµ Р±Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё
-      const hardcodedNames = hardcoded.map(d => d.name);
-      const existingNames = defaults.map(d => d.name);
-      
-      for (const h of hardcoded) {
-        if (!existingNames.includes(h.name)) {
-          defaults.push(h);
-        }
-      }
-      
-      // РЈРґР°Р»СЏРµРј РґСѓР±Р»РёРєР°С‚С‹ РїРѕ РЅР°Р·РІР°РЅРёСЋ (РѕСЃС‚Р°РІР»СЏРµРј РїРµСЂРІС‹Р№)
-      const seen = new Set<string>();
-      const deduped: Dictionary[] = [];
-      for (const d of defaults) {
-        if (!seen.has(d.name)) {
-          seen.add(d.name);
-          deduped.push(d);
-        }
-      }
-      
-      localStorage.setItem('nlk_default_dictionaries', JSON.stringify(deduped));
-      return deduped;
-    };
+    // Р”РµРґСѓРїР»РёС†РёСЂСѓРµРј Р±Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё РїРѕ РЅР°Р·РІР°РЅРёСЋ
+    const stored = localStorage.getItem('nlk_default_dictionaries');
+    let defaults: Dictionary[] = [];
     
-    const restoredDefaults = restoreAndDedupeDefaults();
-    set({ defaultDictionaries: restoredDefaults });
+    if (stored) {
+      try {
+        defaults = JSON.parse(stored);
+      } catch (e) {
+        console.error('loadDictionaries: failed to parse stored defaults', e);
+      }
+    }
+    
+    // РЈРґР°Р»СЏРµРј РґСѓР±Р»РёРєР°С‚С‹ РїРѕ РЅР°Р·РІР°РЅРёСЋ (РѕСЃС‚Р°РІР»СЏРµРј РїРµСЂРІС‹Р№)
+    const seen = new Set<string>();
+    const deduped: Dictionary[] = [];
+    for (const d of defaults) {
+      if (!seen.has(d.name)) {
+        seen.add(d.name);
+        deduped.push(d);
+      }
+    }
+    
+    localStorage.setItem('nlk_default_dictionaries', JSON.stringify(deduped));
+    set({ defaultDictionaries: deduped });
     
     if (isDemoUser) {
       try {
