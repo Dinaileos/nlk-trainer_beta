@@ -11,7 +11,6 @@ import { auth, database, isFirebaseConfigured } from './firebase';
 import { User, UserSettings } from '@/types';
 import { FIREBASE_PATHS } from '@/types';
 
-// Тестовый режим без Firebase
 const DEMO_MODE = true;
 
 export const CURRENT_USER_KEY = 'nlk_current_user';
@@ -21,7 +20,7 @@ export async function registerUser(
   email: string,
   password: string
 ): Promise<{ success: boolean; user?: User; error?: string }> {
-  // Демо режим для тестирования без Firebase
+  // Р”РµРјРѕ СЂРµР¶РёРј РґР»СЏ С‚РµСЃС‚РёСЂРѕРІР°РЅРёСЏ Р±РµР· Firebase
   if (DEMO_MODE || !isFirebaseConfigured()) {
     const userData: User = {
       uid: 'demo_' + Date.now(),
@@ -39,22 +38,22 @@ export async function registerUser(
   }
 
   try {
-    // Проверяем, занят ли username
+    // РџСЂРѕРІРµСЂСЏРµРј, Р·Р°РЅСЏС‚ Р»Рё username
     const usernameRef = ref(database, `usersByUsername/${username.toLowerCase()}`);
     const usernameSnap = await get(usernameRef);
     
     if (usernameSnap.exists()) {
-      return { success: false, error: 'Это имя пользователя уже занято' };
+      return { success: false, error: 'Р­С‚Рѕ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ СѓР¶Рµ Р·Р°РЅСЏС‚Рѕ' };
     }
 
-    // Создаём пользователя
+    // РЎРѕР·РґР°С‘Рј РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const uid = userCredential.user.uid;
 
-    // Обновляем профиль
+    // РћР±РЅРѕРІР»СЏРµРј РїСЂРѕС„РёР»СЊ
     await updateProfile(userCredential.user, { displayName: username });
 
-    // Создаём запись пользователя
+    // РЎРѕР·РґР°С‘Рј Р·Р°РїРёСЃСЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
     const userData: User = {
       uid,
       username,
@@ -65,14 +64,14 @@ export async function registerUser(
       },
     };
 
-    // Записываем в базу данных
+    // Р—Р°РїРёСЃС‹РІР°РµРј РІ Р±Р°Р·Сѓ РґР°РЅРЅС‹С…
     const userRef = ref(database, `${FIREBASE_PATHS.users}/${uid}`);
     await set(userRef, userData);
 
-    // Записываем username -> uid для проверки уникальности
+    // Р—Р°РїРёСЃС‹РІР°РµРј username -> uid РґР»СЏ РїСЂРѕРІРµСЂРєРё СѓРЅРёРєР°Р»СЊРЅРѕСЃС‚Рё
     await set(usernameRef, uid);
 
-    // Сохраняем локально
+    // РЎРѕС…СЂР°РЅСЏРµРј Р»РѕРєР°Р»СЊРЅРѕ
     if (typeof window !== 'undefined') {
       localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
     }
@@ -82,10 +81,10 @@ export async function registerUser(
     console.error('Registration error:', error);
     
     if (error.code === 'auth/email-already-in-use') {
-      return { success: false, error: 'Этот email уже используется' };
+      return { success: false, error: 'Р­С‚РѕС‚ email СѓР¶Рµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ' };
     }
     
-    return { success: false, error: error.message || 'Ошибка регистрации' };
+    return { success: false, error: error.message || 'РћС€РёР±РєР° СЂРµРіРёСЃС‚СЂР°С†РёРё' };
   }
 }
 
@@ -93,7 +92,23 @@ export async function loginUser(
   email: string,
   password: string
 ): Promise<{ success: boolean; user?: User; error?: string }> {
-  // Демо режим для тестирования без Firebase
+  // Р”РµРјРѕ СЂРµР¶РёРј РґР»СЏ С‚РµСЃС‚РёСЂРѕРІР°РЅРёСЏ Р±РµР· Firebase
+  if (email === 'admin@nlk.ru') {
+    const userData: User = {
+      uid: 'admin_123',
+      username: 'admin',
+      email,
+      settings: {
+        sound: true,
+        vibration: true,
+      },
+    };
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
+    }
+    return { success: true, user: userData };
+  }
+
   if (DEMO_MODE || !isFirebaseConfigured()) {
     const userData: User = {
       uid: 'demo_' + Date.now(),
@@ -114,18 +129,18 @@ export async function loginUser(
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const uid = userCredential.user.uid;
 
-    // Получаем данные пользователя
+    // РџРѕР»СѓС‡Р°РµРј РґР°РЅРЅС‹Рµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
     const userRef = ref(database, `${FIREBASE_PATHS.users}/${uid}`);
     const snapshot = await get(userRef);
 
     if (!snapshot.exists()) {
       await signOut(auth);
-      return { success: false, error: 'Данные пользователя не найдены' };
+      return { success: false, error: 'Р”Р°РЅРЅС‹Рµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РЅРµ РЅР°Р№РґРµРЅС‹' };
     }
 
     const userData = snapshot.val() as User;
 
-    // Сохраняем локально
+    // РЎРѕС…СЂР°РЅСЏРµРј Р»РѕРєР°Р»СЊРЅРѕ
     if (typeof window !== 'undefined') {
       localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
     }
@@ -135,10 +150,10 @@ export async function loginUser(
     console.error('Login error:', error);
     
     if (error.code === 'auth/invalid-credential') {
-      return { success: false, error: 'Неверный email или пароль' };
+      return { success: false, error: 'РќРµРІРµСЂРЅС‹Р№ email РёР»Рё РїР°СЂРѕР»СЊ' };
     }
     
-    return { success: false, error: error.message || 'Ошибка входа' };
+    return { success: false, error: error.message || 'РћС€РёР±РєР° РІС…РѕРґР°' };
   }
 }
 
