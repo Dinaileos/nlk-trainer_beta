@@ -125,8 +125,6 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
   
   loadDictionaries: async () => {
     const user = useAuthStore.getState().user;
-    set({ isLoading: true });
-    
     const isDemoUser = user?.uid?.startsWith('demo_') || !user;
     
     // Р”РµРґСѓРїР»РёС†РёСЂСѓРµРј Р±Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё РїРѕ РЅР°Р·РІР°РЅРёСЋ
@@ -152,14 +150,14 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
     }
     
     localStorage.setItem('nlk_default_dictionaries', JSON.stringify(deduped));
-    set({ defaultDictionaries: deduped });
     
     if (isDemoUser) {
       try {
         const demoDicts = JSON.parse(localStorage.getItem('nlk_demo_dictionaries') || '[]');
-        set({ dictionaries: demoDicts, isLoading: false });
+        set({ defaultDictionaries: deduped, dictionaries: demoDicts, isLoading: false });
       } catch (e) {
         console.error('loadDictionaries: failed to parse demo dictionaries', e);
+        set({ defaultDictionaries: deduped, isLoading: false });
       }
       // РџСЂРѕРІРµСЂСЏРµРј РѕР±РЅРѕРІР»РµРЅРёСЏ Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№ РІ С„РѕРЅРµ
       try {
@@ -176,10 +174,10 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
       await sync.syncPendingChanges(user.uid);
       const mergedDicts = await sync.loadAndMergeDictionaries(user.uid, localDicts);
       localStorage.setItem('nlk_demo_dictionaries', JSON.stringify(mergedDicts));
-      set({ dictionaries: mergedDicts });
+      set({ defaultDictionaries: deduped, dictionaries: mergedDicts, isLoading: false });
     } catch {
       const localDicts = JSON.parse(localStorage.getItem('nlk_demo_dictionaries') || '[]');
-      set({ dictionaries: localDicts });
+      set({ defaultDictionaries: deduped, dictionaries: localDicts, isLoading: false });
     }
     
     // РџСЂРѕРІРµСЂСЏРµРј РѕР±РЅРѕРІР»РµРЅРёСЏ Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№ РІ С„РѕРЅРµ
@@ -187,8 +185,6 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
       const defaultDicts = await db.getDefaultDictionaries();
       set({ defaultDictionaries: defaultDicts });
     } catch {}
-    
-    set({ isLoading: false });
   },
 
   createDictionary: async (userId: string, name: string): Promise<string | null> => {
