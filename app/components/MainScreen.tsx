@@ -68,74 +68,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     setNewDefaultDictModalOpen(true);
   };
 
-  const handleRestoreDefaultDicts = () => {
-    if (!confirm('Р’РѕСЃСЃС‚Р°РЅРѕРІРёС‚СЊ Р±Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё (еёёз”ЁиЇЌ, Р§Р°СЃС‚С‹Рµ РѕС€РёР±РєРё)? РЎСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ СЃР»РѕРІР°СЂРё СЃ С‚Р°РєРёРјРё РЅР°Р·РІР°РЅРёСЏРјРё РЅРµ Р±СѓРґСѓС‚ РїРµСЂРµР·Р°РїРёСЃР°РЅС‹.')) {
-      return;
-    }
-    
-    const stored = localStorage.getItem('nlk_default_dictionaries');
-    let defaults: any[] = [];
-    
-    if (stored) {
-      try {
-        defaults = JSON.parse(stored);
-      } catch (e) {
-        console.error('Failed to parse stored defaults', e);
-      }
-    }
-    
-    const hardcoded = [
-      {
-        id: 'default_1',
-        name: 'еёёз”ЁиЇЌ',
-        userId: 'system',
-        isDefault: true,
-        words: [
-          { id: '1', word: 'РїСЂРёРІРµС‚', variants: {}, merges: [], gamesHistory: [], wordErrors: {} },
-          { id: '2', word: 'РїРѕРєР°', variants: {}, merges: [], gamesHistory: [], wordErrors: {} },
-          { id: '3', word: 'СЃРїР°СЃРёР±Рѕ', variants: {}, merges: [], gamesHistory: [], wordErrors: {} },
-          { id: '4', word: 'РїРѕР¶Р°Р»СѓР№СЃС‚Р°', variants: {}, merges: [], gamesHistory: [], wordErrors: {} },
-          { id: '5', word: 'РёР·РІРёРЅРёС‚Рµ', variants: {}, merges: [], gamesHistory: [], wordErrors: {} },
-        ],
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      },
-      {
-        id: 'default_2',
-        name: 'Р§Р°СЃС‚С‹Рµ РѕС€РёР±РєРё',
-        userId: 'system',
-        isDefault: true,
-        words: [
-          { id: '6', word: 'РєРѕС„РµС‘Р¶РєР°', variants: {}, merges: [{ start: 2, end: 3 }], gamesHistory: [], wordErrors: {} },
-          { id: '7', word: 'РѕРґРЅР°РєРѕ', variants: { 4: ['РЅР°РєРѕ', 'РґРЅР°РєРѕ'] }, merges: [], gamesHistory: [], wordErrors: {} },
-          { id: '8', word: 'Р·Р°РІРёСЃРёС‚', variants: { 7: ['РёС‚', 'РµС‚'] }, merges: [], gamesHistory: [], wordErrors: {} },
-          { id: '9', word: 'РєСЂР°СЃРёРІРµРµ', variants: { 8: ['РµР№', 'РµРµ'] }, merges: [], gamesHistory: [], wordErrors: {} },
-          { id: '10', word: 'Р·РІРѕРЅРёС‚', variants: { 5: ['РёС‚', 'РёС‚'] }, merges: [], gamesHistory: [], wordErrors: {} },
-        ],
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      },
-    ];
-    
-    const existingNames = defaults.map((d: any) => d.name);
-    let addedCount = 0;
-    
-    for (const h of hardcoded) {
-      if (!existingNames.includes(h.name)) {
-        defaults.push(h);
-        addedCount++;
-      }
-    }
-    
-    localStorage.setItem('nlk_default_dictionaries', JSON.stringify(defaults));
-    loadDictionaries();
-    
-    if (addedCount > 0) {
-      showToast(`Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРѕ ${addedCount} Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№`);
-    } else {
-      showToast('Р‘Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓСЋС‚');
-    }
-  };
+
 
   const handleCreateDefaultDictSubmit = () => {
     const name = newDefaultDictName.trim();
@@ -489,15 +422,6 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
         )}
 
         {/* Add default dictionary card (admin only) */}
-        {isAdmin && (
-          <div 
-            className="dict-card add-card default-add-card"
-            onClick={handleCreateDefaultDict}
-          >
-            <div className="add-icon">+</div>
-            <div className="add-text">Р”РѕР±Р°РІРёС‚СЊ Р±Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ</div>
-          </div>
-        )}
 
         {/* Restore default dictionaries button (admin only) */}
         {isAdmin && (
