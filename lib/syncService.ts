@@ -2,7 +2,7 @@ import { ref, set, get, update, runTransaction, onValue, off } from 'firebase/da
 import { database } from './firebase';
 import { FIREBASE_PATHS, Dictionary, DictionaryWord, UserStats, GameResult } from '@/types';
 
-// ============ ТИПЫ ДАННЫХ ============
+// ============ РўРРџР« Р”РђРќРќР«РҐ ============
 
 export interface PendingChanges {
   dictionaries?: Record<string, DictionaryChange>;
@@ -31,7 +31,7 @@ export interface GameStateChange {
   timestamp: number;
 }
 
-// ============ ЛОКАЛЬНОЕ ХРАНИЛИЩЕ ============
+// ============ Р›РћРљРђР›Р¬РќРћР• РҐР РђРќРР›РР©Р• ============
 
 const PENDING_CHANGES_KEY = 'nlk_pending_sync';
 const OFFLINE_QUEUE_KEY = 'nlk_offline_queue';
@@ -63,7 +63,7 @@ export const setLastSyncTime = (time: number): void => {
   localStorage.setItem(LAST_SYNC_KEY, time.toString());
 };
 
-// ============ ПРОВЕРКА ИНТЕРНЕТА ============
+// ============ РџР РћР’Р•Р РљРђ РРќРўР•Р РќР•РўРђ ============
 
 export const isOnline = (): boolean => {
   if (typeof window === 'undefined') return false;
@@ -85,7 +85,7 @@ export const subscribeToOnlineStatus = (callback: (online: boolean) => void): ((
   };
 };
 
-// ============ СИНХРОНИЗАЦИЯ СЛОВАРЕЙ ============
+// ============ РЎРРќРҐР РћРќРР—РђР¦РРЇ РЎР›РћР’РђР Р•Р™ ============
 
 export const queueDictionaryChange = (
   action: 'add' | 'update' | 'delete',
@@ -99,7 +99,7 @@ export const queueDictionaryChange = (
   
   const key = dictId ? (wordId ? `${dictId}_${wordId}` : dictId) : `new_${Date.now()}`;
   
-  // Если удаление - оно имеет приоритет над другими изменениями
+  // Р•СЃР»Рё СѓРґР°Р»РµРЅРёРµ - РѕРЅРѕ РёРјРµРµС‚ РїСЂРёРѕСЂРёС‚РµС‚ РЅР°Рґ РґСЂСѓРіРёРјРё РёР·РјРµРЅРµРЅРёСЏРјРё
   if (action === 'delete') {
     changes.dictionaries[key] = {
       action: 'delete',
@@ -108,7 +108,7 @@ export const queueDictionaryChange = (
       timestamp: Date.now()
     };
   } else {
-    // Не добавлять если уже есть удаление
+    // РќРµ РґРѕР±Р°РІР»СЏС‚СЊ РµСЃР»Рё СѓР¶Рµ РµСЃС‚СЊ СѓРґР°Р»РµРЅРёРµ
     const existing = changes.dictionaries[key];
     if (existing?.action === 'delete') return;
     
@@ -124,7 +124,7 @@ export const queueDictionaryChange = (
   savePendingChanges(changes);
 };
 
-// ============ СИНХРОНИЗАЦИЯ СТАТИСТИКИ ============
+// ============ РЎРРќРҐР РћРќРР—РђР¦РРЇ РЎРўРђРўРРЎРўРРљР ============
 
 export const queueStatsChange = (
   wordErrors?: Record<string, number>,
@@ -137,7 +137,7 @@ export const queueStatsChange = (
     timestamp: Date.now()
   };
   
-  // Накапливаем ошибки
+  // РќР°РєР°РїР»РёРІР°РµРј РѕС€РёР±РєРё
   if (wordErrors) {
     if (!changes.stats.wordErrors) changes.stats.wordErrors = {};
     for (const [word, count] of Object.entries(wordErrors)) {
@@ -153,7 +153,7 @@ export const queueStatsChange = (
   savePendingChanges(changes);
 };
 
-// ============ СИНХРОНИЗАЦИЯ СОСТОЯНИЯ ИГРЫ ============
+// ============ РЎРРќРҐР РћРќРР—РђР¦РРЇ РЎРћРЎРўРћРЇРќРРЇ РР“Р Р« ============
 
 export const queueGameStateChange = (data: any): void => {
   const changes = getPendingChanges() || {};
@@ -176,11 +176,11 @@ export const clearQueuedGameState = (): void => {
   savePendingChanges(changes);
 };
 
-// ============ ОТПРАВКА ИЗМЕНЕНИЙ В FIREBASE ============
+// ============ РћРўРџР РђР’РљРђ РР—РњР•РќР•РќРР™ Р’ FIREBASE ============
 
 export const syncPendingChanges = async (uid: string): Promise<{ success: boolean; error?: string }> => {
   if (!isOnline()) {
-    return { success: false, error: 'Нет интернета' };
+    return { success: false, error: 'РќРµС‚ РёРЅС‚РµСЂРЅРµС‚Р°' };
   }
   
   const changes = getPendingChanges();
@@ -189,24 +189,24 @@ export const syncPendingChanges = async (uid: string): Promise<{ success: boolea
   }
   
   try {
-    // 1. Синхронизация словарей
+    // 1. РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ СЃР»РѕРІР°СЂРµР№
     if (changes.dictionaries) {
       for (const [key, change] of Object.entries(changes.dictionaries)) {
         await syncDictionaryChange(uid, change as DictionaryChange);
       }
     }
     
-    // 2. Синхронизация статистики
+    // 2. РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ СЃС‚Р°С‚РёСЃС‚РёРєРё
     if (changes.stats) {
       await syncStatsChange(uid, changes.stats);
     }
     
-    // 3. Синхронизация состояния игры
+    // 3. РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ СЃРѕСЃС‚РѕСЏРЅРёСЏ РёРіСЂС‹
     if (changes.gameState) {
       await syncGameStateChange(uid, changes.gameState);
     }
     
-    // Очистить очередь после успешной синхронизации
+    // РћС‡РёСЃС‚РёС‚СЊ РѕС‡РµСЂРµРґСЊ РїРѕСЃР»Рµ СѓСЃРїРµС€РЅРѕР№ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё
     clearPendingChanges();
     setLastSyncTime(Date.now());
     
@@ -220,11 +220,11 @@ export const syncPendingChanges = async (uid: string): Promise<{ success: boolea
 const syncDictionaryChange = async (uid: string, change: DictionaryChange) => {
   if (change.action === 'delete') {
     if (change.wordId) {
-      // Удаление слова
+      // РЈРґР°Р»РµРЅРёРµ СЃР»РѕРІР°
       const wordRef = ref(database, `${FIREBASE_PATHS.users}/${uid}/dictionaries/${change.dictId}/words/${change.wordId}`);
       await update(wordRef, { deleted: true, deletedAt: Date.now() });
     } else if (change.dictId) {
-      // Удаление словаря
+      // РЈРґР°Р»РµРЅРёРµ СЃР»РѕРІР°СЂСЏ
       const dictRef = ref(database, `${FIREBASE_PATHS.users}/${uid}/dictionaries/${change.dictId}`);
       await update(dictRef, { deleted: true, deletedAt: Date.now() });
     }
@@ -248,7 +248,7 @@ const syncDictionaryChange = async (uid: string, change: DictionaryChange) => {
 const syncStatsChange = async (uid: string, change: StatsChange) => {
   const statsRef = ref(database, `${FIREBASE_PATHS.users}/${uid}/stats`);
   
-  // Читаем текущую статистику
+  // Р§РёС‚Р°РµРј С‚РµРєСѓС‰СѓСЋ СЃС‚Р°С‚РёСЃС‚РёРєСѓ
   const snapshot = await get(statsRef);
   const currentStats: UserStats = snapshot.exists() ? snapshot.val() : {
     totalGames: 0,
@@ -259,7 +259,7 @@ const syncStatsChange = async (uid: string, change: StatsChange) => {
   
   const updates: any = {};
   
-  // Добавляем ошибки слов (простое сложение)
+  // Р”РѕР±Р°РІР»СЏРµРј РѕС€РёР±РєРё СЃР»РѕРІ (РїСЂРѕСЃС‚РѕРµ СЃР»РѕР¶РµРЅРёРµ)
   if (change.wordErrors) {
     const newWordErrors = { ...currentStats.wordErrors };
     for (const [word, count] of Object.entries(change.wordErrors)) {
@@ -269,10 +269,10 @@ const syncStatsChange = async (uid: string, change: StatsChange) => {
     updates.totalErrors = Object.values(newWordErrors).reduce((a: number, b: number) => a + b, 0);
   }
   
-  // Добавляем результат игры
+  // Р”РѕР±Р°РІР»СЏРµРј СЂРµР·СѓР»СЊС‚Р°С‚ РёРіСЂС‹
   if (change.gameResult) {
     const games = [...(currentStats.games || []), change.gameResult];
-    games.sort((a, b) => a.date - b.date); // Сортируем по времени
+    games.sort((a, b) => a.date - b.date); // РЎРѕСЂС‚РёСЂСѓРµРј РїРѕ РІСЂРµРјРµРЅРё
     updates.games = games;
     updates.totalGames = games.length;
   }
@@ -295,7 +295,7 @@ const syncGameStateChange = async (uid: string, change: GameStateChange) => {
   }
 };
 
-// ============ ЗАГРУЗКА ДАННЫХ С СИНХРОНИЗАЦИЕЙ ============
+// ============ Р—РђР“Р РЈР—РљРђ Р”РђРќРќР«РҐ РЎ РЎРРќРҐР РћРќРР—РђР¦РР•Р™ ============
 
 export const loadAndMergeDictionaries = async (uid: string, localDicts: Dictionary[]): Promise<Dictionary[]> => {
   if (!isOnline()) {
@@ -314,16 +314,16 @@ export const loadAndMergeDictionaries = async (uid: string, localDicts: Dictiona
     const mergedDicts = [...localDicts];
     
     for (const [remoteId, remoteDict] of Object.entries(remoteDicts)) {
-      // Пропускаем удалённые
+      // РџСЂРѕРїСѓСЃРєР°РµРј СѓРґР°Р»С‘РЅРЅС‹Рµ
       if (remoteDict.deleted) continue;
       
       const localIndex = mergedDicts.findIndex(d => d.id === remoteId);
       
       if (localIndex === -1) {
-        // Нет локально - добавляем с сервера
+        // РќРµС‚ Р»РѕРєР°Р»СЊРЅРѕ - РґРѕР±Р°РІР»СЏРµРј СЃ СЃРµСЂРІРµСЂР°
         mergedDicts.push({ id: remoteId, ...remoteDict });
       } else {
-        // Есть локально - мержим (удаления имеют приоритет)
+        // Р•СЃС‚СЊ Р»РѕРєР°Р»СЊРЅРѕ - РјРµСЂР¶РёРј (СѓРґР°Р»РµРЅРёСЏ РёРјРµСЋС‚ РїСЂРёРѕСЂРёС‚РµС‚)
         const local = mergedDicts[localIndex];
         const mergedWords = mergeWords(local.words || [], remoteDict.words || {}, remoteDict.deletedWords || {});
         mergedDicts[localIndex] = { ...local, ...remoteDict, words: mergedWords };
@@ -342,12 +342,12 @@ const mergeWords = (
   remoteWords: Record<string, any>,
   deletedWordIds: Record<string, boolean>
 ): DictionaryWord[] => {
-  // Удаляем слова, которые удалены на сервере
+  // РЈРґР°Р»СЏРµРј СЃР»РѕРІР°, РєРѕС‚РѕСЂС‹Рµ СѓРґР°Р»РµРЅС‹ РЅР° СЃРµСЂРІРµСЂРµ
   const filteredLocal = localWords.filter(w => !deletedWordIds[w.id]);
   
-  // Добавляем новые слова с сервера
+  // Р”РѕР±Р°РІР»СЏРµРј РЅРѕРІС‹Рµ СЃР»РѕРІР° СЃ СЃРµСЂРІРµСЂР°
   for (const [id, word] of Object.entries(remoteWords)) {
-    if (deletedWordIds[id]) continue; // Пропускаем удалённые
+    if (deletedWordIds[id]) continue; // РџСЂРѕРїСѓСЃРєР°РµРј СѓРґР°Р»С‘РЅРЅС‹Рµ
     
     const exists = filteredLocal.find(w => w.id === id);
     if (!exists) {
@@ -360,7 +360,7 @@ const mergeWords = (
 
 export const loadGameState = async (uid: string): Promise<any | null> => {
   if (!isOnline()) {
-    // В офлайне возвращаем локальное состояние если есть
+    // Р’ РѕС„Р»Р°Р№РЅРµ РІРѕР·РІСЂР°С‰Р°РµРј Р»РѕРєР°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ РµСЃР»Рё РµСЃС‚СЊ
     const pending = getPendingChanges();
     return pending?.gameState?.data || null;
   }
@@ -389,3 +389,151 @@ export const loadStats = async (uid: string): Promise<UserStats | null> => {
     return null;
   }
 };
+
+// ============ РћР‘РЄР•Р”РРќР•РќРР• РЎР›РћР’РђР Р•Р™ ============
+
+/**
+ * РћР±СЉРµРґРёРЅСЏРµС‚ РґРІРµ РІРµСЂСЃРёРё СЃР»РѕРІР°СЂСЏ РїРѕ РїСЂР°РІРёР»Р°Рј:
+ * 1. Р’С‹Р±РёСЂР°РµС‚СЃСЏ РІРµСЂСЃРёСЏ СЃ Р±РѕР»СЊС€РёРј updatedAt РєР°Рє РѕСЃРЅРѕРІР°
+ * 2. Р”РѕР±Р°РІР»СЏСЋС‚СЃСЏ СЃР»РѕРІР° РёР· РІС‚РѕСЂРѕР№ РІРµСЂСЃРёРё, РєРѕС‚РѕСЂС‹С… РЅРµС‚ РІ РїРµСЂРІРѕР№ (РїРѕ word, Р±РµР· СѓС‡С‘С‚Р° СЂРµРіРёСЃС‚СЂР°)
+ * 3. РџСЂРё РєРѕРЅС„Р»РёРєС‚Рµ СЃР»РѕРІР° (РѕРґРёРЅР°РєРѕРІС‹Р№ word) РѕСЃС‚Р°С‘С‚СЃСЏ РІР°СЂРёР°РЅС‚ СЃ Р±РѕР»СЊС€РёРј updatedAt
+ * 4. Р’СЃРµ РїРѕР»СЏ СЃР»РѕРІР°СЂСЏ (name, userId, isDefault, plusDictionary Рё С‚.Рґ.) Р±РµСЂСѓС‚СЃСЏ РёР· Р±РѕР»РµРµ РЅРѕРІРѕР№ РІРµСЂСЃРёРё
+ * 5. РС‚РѕРіРѕРІС‹Р№ updatedAt СѓСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ РІ Date.now()
+ */
+export function mergeDictionaries(newDict: Dictionary, oldDict: Dictionary): Dictionary {
+  // РћРїСЂРµРґРµР»СЏРµРј, РєР°РєР°СЏ РІРµСЂСЃРёСЏ СЃР»РѕРІР°СЂСЏ РЅРѕРІРµРµ РїРѕ updatedAt
+  const isNewDictNewer = newDict.updatedAt >= oldDict.updatedAt;
+  const baseDict = isNewDictNewer ? newDict : oldDict;
+  const otherDict = isNewDictNewer ? oldDict : newDict;
+
+  // Map РґР»СЏ РѕР±СЉРµРґРёРЅРµРЅРёСЏ СЃР»РѕРІ: РєР»СЋС‡ - word РІ РЅРёР¶РЅРµРј СЂРµРіРёСЃС‚СЂРµ
+  const wordsMap = new Map<string, DictionaryWord>();
+
+  // Р”РѕР±Р°РІР»СЏРµРј СЃР»РѕРІР° РёР· Р±Р°Р·РѕРІРѕР№ (Р±РѕР»РµРµ РЅРѕРІРѕР№) РІРµСЂСЃРёРё
+  for (const word of baseDict.words) {
+    const key = word.word.toLowerCase();
+    wordsMap.set(key, word);
+  }
+
+  // РћР±СЂР°Р±Р°С‚С‹РІР°РµРј СЃР»РѕРІР° РёР· РІС‚РѕСЂРѕР№ РІРµСЂСЃРёРё
+  for (const word of otherDict.words) {
+    const key = word.word.toLowerCase();
+    const existing = wordsMap.get(key);
+
+    if (!existing) {
+      // РЎР»РѕРІР° РЅРµС‚ РІ Р±Р°Р·РѕРІРѕР№ РІРµСЂСЃРёРё - РґРѕР±Р°РІР»СЏРµРј
+      wordsMap.set(key, word);
+    } else {
+      // РЎР»РѕРІРѕ СѓР¶Рµ РµСЃС‚СЊ - РІС‹Р±РёСЂР°РµРј Р±РѕР»РµРµ РЅРѕРІРѕРµ РїРѕ updatedAt
+      const existingTs = (existing as any).updatedAt || 0;
+      const wordTs = (word as any).updatedAt || 0;
+      if (wordTs > existingTs) {
+        wordsMap.set(key, word);
+      }
+    }
+  }
+
+  // РЎРѕР±РёСЂР°РµРј РёС‚РѕРіРѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ: РІСЃРµ РїРѕР»СЏ РёР· Р±РѕР»РµРµ РЅРѕРІРѕР№ РІРµСЂСЃРёРё + РѕР±СЉРµРґРёРЅС‘РЅРЅС‹Рµ СЃР»РѕРІР° + РЅРѕРІС‹Р№ updatedAt
+  const mergedDict: Dictionary = {
+    ...baseDict,
+    words: Array.from(wordsMap.values()),
+    updatedAt: Date.now(),
+  };
+
+  return mergedDict;
+}
+
+/**
+ * РЎРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚ СЃР»РѕРІР°СЂСЊ РјРµР¶РґСѓ Р»РѕРєР°Р»СЊРЅС‹Рј С…СЂР°РЅРёР»РёС‰РµРј Рё Firebase.
+ * РџСЂРё РѕС€РёР±РєРµ СЃРµС‚Рё РІРѕР·РІСЂР°С‰Р°РµС‚ Р»РѕРєР°Р»СЊРЅСѓСЋ РІРµСЂСЃРёСЋ.
+ */
+export async function syncDictionary(uid: string, dictId: string): Promise<Dictionary> {
+  // 1. Р§РёС‚Р°РµРј Р»РѕРєР°Р»СЊРЅСѓСЋ РІРµСЂСЃРёСЋ СЃР»РѕРІР°СЂСЏ РёР· localStorage (РєР»СЋС‡ 'nlk_dictionaries')
+  let localDicts: Dictionary[] = [];
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('nlk_dictionaries');
+    if (stored) {
+      try {
+        localDicts = JSON.parse(stored);
+      } catch (e) {
+        console.error('Error parsing local dictionaries:', e);
+        localDicts = [];
+      }
+    }
+  }
+  const localDict = localDicts.find(d => d.id === dictId);
+
+  // 2. Р§РёС‚Р°РµРј СЃРµСЂРІРµСЂРЅСѓСЋ РІРµСЂСЃРёСЋ РёР· Firebase (РїСѓС‚СЊ: users/{uid}/dictionaries/{dictId})
+  let serverDict: Dictionary | null = null;
+
+  if (!isOnline()) {
+    // РќРµС‚ РёРЅС‚РµСЂРЅРµС‚Р° вЂ” РІРѕР·РІСЂР°С‰Р°РµРј Р»РѕРєР°Р»СЊРЅСѓСЋ РІРµСЂСЃРёСЋ, РµСЃР»Рё РµСЃС‚СЊ
+    if (localDict) {
+      return localDict;
+    }
+    throw new Error('РќРµС‚ РёРЅС‚РµСЂРЅРµС‚Р° Рё Р»РѕРєР°Р»СЊРЅР°СЏ РІРµСЂСЃРёСЏ СЃР»РѕРІР°СЂСЏ РѕС‚СЃСѓС‚СЃС‚РІСѓРµС‚');
+  }
+
+  try {
+    const dictRef = ref(database, `${FIREBASE_PATHS.users}/${uid}/dictionaries/${dictId}`);
+    const snapshot = await get(dictRef);
+
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      // РџСЂРѕРїСѓСЃРєР°РµРј СѓРґР°Р»С‘РЅРЅС‹Рµ СЃР»РѕРІР°СЂРё
+      if (!data.deleted) {
+        serverDict = { id: dictId, ...data };
+      }
+    }
+  } catch (error) {
+    console.error('Error reading dictionary from Firebase:', error);
+    // РџСЂРё РѕС€РёР±РєРµ СЃРµС‚Рё РІРѕР·РІСЂР°С‰Р°РµРј Р»РѕРєР°Р»СЊРЅСѓСЋ РІРµСЂСЃРёСЋ
+    if (localDict) {
+      return localDict;
+    }
+    throw error;
+  }
+
+  // 3. Р•СЃР»Рё СЃРµСЂРІРµСЂРЅРѕР№ РІРµСЂСЃРёРё РЅРµС‚ вЂ” Р·Р°РїРёСЃС‹РІР°РµРј Р»РѕРєР°Р»СЊРЅСѓСЋ РІ Firebase Рё РІРѕР·РІСЂР°С‰Р°РµРј РµС‘
+  if (!serverDict) {
+    if (localDict) {
+      try {
+        const dictRef = ref(database, `${FIREBASE_PATHS.users}/${uid}/dictionaries/${dictId}`);
+        await set(dictRef, { ...localDict, updatedAt: Date.now() });
+      } catch (error) {
+        console.error('Error writing local dict to Firebase:', error);
+      }
+      return localDict;
+    }
+    throw new Error('РЎР»РѕРІР°СЂСЊ РЅРµ РЅР°Р№РґРµРЅ РЅРё Р»РѕРєР°Р»СЊРЅРѕ, РЅРё РЅР° СЃРµСЂРІРµСЂРµ');
+  }
+
+  // 4. Р•СЃР»Рё Р»РѕРєР°Р»СЊРЅРѕР№ РІРµСЂСЃРёРё РЅРµС‚ вЂ” Р·Р°РїРёСЃС‹РІР°РµРј СЃРµСЂРІРµСЂРЅСѓСЋ РІ localStorage Рё РІРѕР·РІСЂР°С‰Р°РµРј РµС‘
+  if (!localDict) {
+    localDicts.push(serverDict);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nlk_dictionaries', JSON.stringify(localDicts));
+    }
+    return serverDict;
+  }
+
+  // 5. Р•СЃС‚СЊ РѕР±Рµ РІРµСЂСЃРёРё вЂ” РѕР±СЉРµРґРёРЅСЏРµРј С‡РµСЂРµР· mergeDictionaries
+  const merged = mergeDictionaries(localDict, serverDict);
+
+  // 5b. Р—Р°РїРёСЃС‹РІР°РµРј СЂРµР·СѓР»СЊС‚Р°С‚ РІ localStorage
+  const updatedLocalDicts = localDicts.map(d => d.id === dictId ? merged : d);
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('nlk_dictionaries', JSON.stringify(updatedLocalDicts));
+  }
+
+  // 5c. Р—Р°РїРёСЃС‹РІР°РµРј СЂРµР·СѓР»СЊС‚Р°С‚ РІ Firebase
+  try {
+    const dictRef = ref(database, `${FIREBASE_PATHS.users}/${uid}/dictionaries/${dictId}`);
+    await set(dictRef, { ...merged, updatedAt: Date.now() });
+  } catch (error) {
+    console.error('Error writing merged dict to Firebase:', error);
+  }
+
+  // 5d. Р’РѕР·РІСЂР°С‰Р°РµРј РѕР±СЉРµРґРёРЅС‘РЅРЅС‹Р№ СЃР»РѕРІР°СЂСЊ
+  return merged;
+}
