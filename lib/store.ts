@@ -159,33 +159,60 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
         console.error('loadDictionaries: failed to parse demo dictionaries', e);
         set({ defaultDictionaries: deduped, isLoading: false });
       }
-      // РџСЂРѕРІРµСЂСЏРµРј РѕР±РЅРѕРІР»РµРЅРёСЏ Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№ РІ С„РѕРЅРµ
-      try {
-        const defaultDicts = await db.getDefaultDictionaries();
-        set({ defaultDictionaries: defaultDicts });
-      } catch (e) {
-        console.error('loadDictionaries: failed to fetch default dictionaries', e);
-      }
-      return;
-    }
-    
-    try {
-      const localDicts = JSON.parse(localStorage.getItem('nlk_demo_dictionaries') || '[]');
-      await sync.syncPendingChanges(user.uid);
-      const mergedDicts = await sync.loadAndMergeDictionaries(user.uid, localDicts);
-      localStorage.setItem('nlk_demo_dictionaries', JSON.stringify(mergedDicts));
-      set({ defaultDictionaries: deduped, dictionaries: mergedDicts, isLoading: false });
-    } catch {
-      const localDicts = JSON.parse(localStorage.getItem('nlk_demo_dictionaries') || '[]');
-      set({ defaultDictionaries: deduped, dictionaries: localDicts, isLoading: false });
-    }
-    
-    // РџСЂРѕРІРµСЂСЏРµРј РѕР±РЅРѕРІР»РµРЅРёСЏ Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№ РІ С„РѕРЅРµ
+    // РџСЂРѕРІРµСЂСЏРµРј РѕР±РЅРѕРІР»РµРЅРёСЏ Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№ РІ С„РѕРЅРµ (Р»РѕРєР°Р»СЊРЅС‹Рµ РёРјРµСЋС‚ РїСЂРёРѕСЂРёС‚РµС‚)
     try {
       const defaultDicts = await db.getDefaultDictionaries();
-      set({ defaultDictionaries: defaultDicts });
-    } catch {}
-  },
+      const stored = localStorage.getItem('nlk_default_dictionaries');
+      const localDefaults: Dictionary[] = stored ? JSON.parse(stored) : [];
+      
+      // Р›РѕРєР°Р»СЊРЅС‹Рµ Р±Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё РІСЃРµРіРґР° РїРµСЂРµР·Р°РїРёСЃС‹РІР°СЋС‚ СЃРµСЂРІРµСЂРЅС‹Рµ (РїСЂРёРѕСЂРёС‚РµС‚ Р°РґРјРёРЅР°)
+      const merged = [...defaultDicts];
+      for (const localDict of localDefaults) {
+        const idx = merged.findIndex(d => d.id === localDict.id);
+        if (idx >= 0) {
+          merged[idx] = localDict; // Р›РѕРєР°Р»СЊРЅР°СЏ РІРµСЂСЃРёСЏ РІР°Р¶РЅРµРµ
+        } else {
+          merged.push(localDict);
+        }
+      }
+      
+      set({ defaultDictionaries: merged });
+    } catch (e) {
+      console.error('loadDictionaries: failed to fetch default dictionaries', e);
+    }
+    return;
+  }
+  
+  try {
+    const localDicts = JSON.parse(localStorage.getItem('nlk_demo_dictionaries') || '[]');
+    await sync.syncPendingChanges(user.uid);
+    const mergedDicts = await sync.loadAndMergeDictionaries(user.uid, localDicts);
+    localStorage.setItem('nlk_demo_dictionaries', JSON.stringify(mergedDicts));
+    set({ defaultDictionaries: deduped, dictionaries: mergedDicts, isLoading: false });
+  } catch {
+    const localDicts = JSON.parse(localStorage.getItem('nlk_demo_dictionaries') || '[]');
+    set({ defaultDictionaries: deduped, dictionaries: localDicts, isLoading: false });
+  }
+  
+  // РџСЂРѕРІРµСЂСЏРµРј РѕР±РЅРѕРІР»РµРЅРёСЏ Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№ РІ С„РѕРЅРµ (Р»РѕРєР°Р»СЊРЅС‹Рµ РёРјРµСЋС‚ РїСЂРёРѕСЂРёС‚РµС‚)
+  try {
+    const defaultDicts = await db.getDefaultDictionaries();
+    const stored = localStorage.getItem('nlk_default_dictionaries');
+    const localDefaults: Dictionary[] = stored ? JSON.parse(stored) : [];
+    
+    const merged = [...defaultDicts];
+    for (const localDict of localDefaults) {
+      const idx = merged.findIndex(d => d.id === localDict.id);
+      if (idx >= 0) {
+        merged[idx] = localDict; // Р›РѕРєР°Р»СЊРЅР°СЏ РІРµСЂСЃРёСЏ РІР°Р¶РЅРµРµ
+      } else {
+        merged.push(localDict);
+      }
+    }
+    
+    set({ defaultDictionaries: merged });
+  } catch {}
+},
 
   createDictionary: async (userId: string, name: string): Promise<string | null> => {
     try {
@@ -229,7 +256,7 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
   updateDictionary: async (dictId, updates) => {
     const user = useAuthStore.getState().user;
     
-    // Demo mode
+    // Demo mode - С‚РѕР»СЊРєРѕ localStorage
     if (!user || user.uid.startsWith('demo_')) {
       const demoDicts = JSON.parse(localStorage.getItem('nlk_demo_dictionaries') || '[]');
       const idx = demoDicts.findIndex((d: any) => d.id === dictId);
@@ -241,8 +268,42 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
       return;
     }
     
-    await db.updateDictionary(user.uid, dictId, updates);
-    await get().loadDictionaries();
+    // Real Firebase user
+    try {
+      // 1. РЎРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµРј СЃР»РѕРІР°СЂСЊ РїРµСЂРµРґ РёР·РјРµРЅРµРЅРёРµРј
+      const syncedDict = await sync.syncDictionary(user.uid, dictId);
+      
+      // 2. РџСЂРёРјРµРЅСЏРµРј РѕР±РЅРѕРІР»РµРЅРёСЏ Рє СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°РЅРЅРѕР№ РІРµСЂСЃРёРё
+      const updatedDict = { ...syncedDict, ...updates, updatedAt: Date.now() };
+      
+      // 3. РЎРѕС…СЂР°РЅСЏРµРј РІ Firebase
+      const { set: setDb } = await import('firebase/database');
+      const { database } = await import('@/lib/firebase');
+      const { FIREBASE_PATHS } = await import('@/types');
+      
+      const dictRef = ref(database, `${FIREBASE_PATHS.users}/${user.uid}/dictionaries/${dictId}`);
+      await setDb(dictRef, { ...updatedDict });
+      
+      // 4. РћР±РЅРѕРІР»СЏРµРј Р»РѕРєР°Р»СЊРЅС‹Р№ СЃС‚РѕСЂ Рё localStorage
+      const dictionaries = get().dictionaries;
+      const updatedDicts = dictionaries.map(d => d.id === dictId ? updatedDict : d);
+      set({ dictionaries: updatedDicts });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nlk_demo_dictionaries', JSON.stringify(updatedDicts));
+      }
+      
+    } catch (error) {
+      console.error('Error updating dictionary:', error);
+      // Fallback: РїСЂРѕСЃС‚Рѕ РѕР±РЅРѕРІР»СЏРµРј Р»РѕРєР°Р»СЊРЅРѕ
+      const dictionaries = get().dictionaries;
+      const updatedDicts = dictionaries.map(d => 
+        d.id === dictId ? { ...d, ...updates, updatedAt: Date.now() } : d
+      );
+      set({ dictionaries: updatedDicts });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nlk_demo_dictionaries', JSON.stringify(updatedDicts));
+      }
+    }
   },
 
   deleteDictionary: async (dictId) => {
@@ -265,8 +326,30 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
       return;
     }
     
-    await db.deleteDictionary(user.uid, dictId);
-    await get().loadDictionaries();
+    // Real Firebase user
+    try {
+      // 1. РЎРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµРј, С‡С‚РѕР±С‹ СѓРґР°Р»РёС‚СЊ Р°РєС‚СѓР°Р»СЊРЅСѓСЋ РІРµСЂСЃРёСЋ
+      await sync.syncDictionary(user.uid, dictId);
+      
+      // 2. РџРѕРјРµС‡Р°РµРј СѓРґР°Р»С‘РЅРЅС‹Рј РІ Firebase
+      const { update } = await import('firebase/database');
+      const { database } = await import('@/lib/firebase');
+      const { FIREBASE_PATHS } = await import('@/types');
+      
+      const dictRef = ref(database, `${FIREBASE_PATHS.users}/${user.uid}/dictionaries/${dictId}`);
+      await update(dictRef, { deleted: true, deletedAt: Date.now() });
+      
+      // 3. РЈРґР°Р»СЏРµРј РёР· Р»РѕРєР°Р»СЊРЅРѕРіРѕ СЃС‚РѕСЂР°
+      const dictionaries = get().dictionaries;
+      const updatedDicts = dictionaries.filter(d => d.id !== dictId);
+      set({ dictionaries: updatedDicts });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nlk_demo_dictionaries', JSON.stringify(updatedDicts));
+      }
+      
+    } catch (error) {
+      console.error('Error deleting dictionary:', error);
+    }
   },
   
   deleteWord: async (dictId, wordId) => {
@@ -291,8 +374,43 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
       return;
     }
     
-    await db.deleteWordFromDictionary(user.uid, dictId, wordId);
-    await get().loadDictionaries();
+    // Real Firebase user
+    try {
+      // 1. РЎРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµРј СЃР»РѕРІР°СЂСЊ РїРµСЂРµРґ СѓРґР°Р»РµРЅРёРµРј
+      await sync.syncDictionary(user.uid, dictId);
+
+      // 2. РЈРґР°Р»СЏРµРј СЃР»РѕРІРѕ РёР· Firebase
+      await db.deleteWordFromDictionary(user.uid, dictId, wordId);
+
+      // 3. РћР±РЅРѕРІР»СЏРµРј Р»РѕРєР°Р»СЊРЅС‹Р№ СЃС‚РѕСЂ
+      const dictionaries = get().dictionaries;
+      const updatedDicts = dictionaries.map(d => {
+        if (d.id === dictId) {
+          return { ...d, words: d.words.filter(w => w.id !== wordId), updatedAt: Date.now() };
+        }
+        return d;
+      });
+      
+      set({ dictionaries: updatedDicts });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nlk_demo_dictionaries', JSON.stringify(updatedDicts));
+      }
+      
+    } catch (error) {
+      console.error('Error deleting word:', error);
+      // Fallback: СѓРґР°Р»СЏРµРј Р»РѕРєР°Р»СЊРЅРѕ
+      const dictionaries = get().dictionaries;
+      const updatedDicts = dictionaries.map(d => {
+        if (d.id === dictId) {
+          return { ...d, words: d.words.filter(w => w.id !== wordId), updatedAt: Date.now() };
+        }
+        return d;
+      });
+      set({ dictionaries: updatedDicts });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nlk_demo_dictionaries', JSON.stringify(updatedDicts));
+      }
+    }
   },
   
   setCurrentDict: (index) => {
@@ -396,7 +514,18 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
           defaultDicts[dictIndex].words.push(wordData);
         }
         
+        // РћР±РЅРѕРІР»СЏРµРј updatedAt СЃР»РѕРІР°СЂСЏ, С‡С‚РѕР±С‹ СЃРёСЃС‚РµРјР° СЃС‡РёС‚Р°Р»Р° РµРіРѕ РЅРѕРІРµРµ СЃРµСЂРІРµСЂРЅРѕРіРѕ
+        defaultDicts[dictIndex].updatedAt = Date.now();
+        
         localStorage.setItem('nlk_default_dictionaries', JSON.stringify(defaultDicts));
+        
+        // РЇРІРЅРѕ РѕР±РЅРѕРІР»СЏРµРј defaultDictionaries РІ СЃС‚РѕСЂРµ, С‡С‚РѕР±С‹ UI РѕР±РЅРѕРІРёР»СЃСЏ РјРіРЅРѕРІРµРЅРЅРѕ
+        const currentDefaults = useDictionariesStore.getState().defaultDictionaries;
+        const updatedDefaults = currentDefaults.map(d => 
+          d.id === dictId ? defaultDicts[dictIndex] : d
+        );
+        useDictionariesStore.setState({ defaultDictionaries: updatedDefaults });
+        
         await useDictionariesStore.getState().loadDictionaries();
         get().clearEditor();
         return { success: true };
@@ -450,6 +579,13 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
       // Real Firebase user
       if (!user) {
         return { success: false, error: 'РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ' };
+      }
+      
+      // 0. РЎРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµРј СЃР»РѕРІР°СЂСЊ РїРµСЂРµРґ РґРѕР±Р°РІР»РµРЅРёРµРј/РѕР±РЅРѕРІР»РµРЅРёРµРј СЃР»РѕРІР°
+      try {
+        await sync.syncDictionary(user.uid, dictId);
+      } catch (syncError) {
+        console.error('syncDictionary failed in saveWord, proceeding with local save:', syncError);
       }
       
       // РџСЂРѕРІРµСЂСЏРµРј Р»РёРјРёС‚ СЃР»РѕРІ (С‚РѕР»СЊРєРѕ РґР»СЏ РЅРѕРІС‹С… СЃР»РѕРІ)
