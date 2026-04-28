@@ -32,11 +32,11 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
   const [newDictName, setNewDictName] = useState('');
   const [newDefaultDictModalOpen, setNewDefaultDictModalOpen] = useState(false);
   const [newDefaultDictName, setNewDefaultDictName] = useState('');
-
+  
   useEffect(() => {
     loadDictionaries();
   }, [loadDictionaries]);
-
+  
   const handleCreateDict = async () => {
     const name = newDictName.trim();
     if (!name) {
@@ -63,20 +63,18 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
       showToast('РћС€РёР±РєР° СЃРѕР·РґР°РЅРёСЏ', true);
     }
   };
-
+  
   const handleCreateDefaultDict = () => {
     setNewDefaultDictModalOpen(true);
   };
-
-
-
+  
   const handleCreateDefaultDictSubmit = () => {
     const name = newDefaultDictName.trim();
     if (!name) {
       showToast('Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ СЃР»РѕРІР°СЂСЏ', true);
       return;
     }
-  
+    
     const defaultDicts = JSON.parse(localStorage.getItem('nlk_default_dictionaries') || '[]');
     
     // Check for duplicates
@@ -86,7 +84,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
       showToast('Р‘Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ СЃ С‚Р°РєРёРј РЅР°Р·РІР°РЅРёРµРј СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚', true);
       return;
     }
-  
+    
     const newDict = {
       id: 'default_' + Date.now(),
       name: name,
@@ -96,7 +94,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-  
+    
     defaultDicts.push(newDict);
     localStorage.setItem('nlk_default_dictionaries', JSON.stringify(defaultDicts));
     
@@ -107,12 +105,12 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     setNewDefaultDictName('');
     showToast('Р‘Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ СЃРѕР·РґР°РЅ');
   };
-
-  const handleDefaultDictClick = (index: number) => {
-    setCurrentDict(-1 - index); // Negative for default dicts
-    onNavigate('exercise', -1 - index);
+  
+  const handleDefaultDictClick = (idx: number) => {
+    setCurrentDict(-1 - idx);
+    onNavigate('exercise', -1 - idx);
   };
-
+  
   const handleUserDictClick = (index: number, event: React.MouseEvent) => {
     if ((event.target as HTMLElement).closest('.dict-card-btn') || 
         (event.target as HTMLElement).closest('.plus-btn') ||
@@ -123,7 +121,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     setCurrentDict(index);
     onNavigate('exercise', index);
   };
-
+  
   const handlePlusCardClick = (index: number, event: React.MouseEvent) => {
     event.stopPropagation();
     const flipBtn = (event.target as HTMLElement).closest('.flip-btn');
@@ -158,7 +156,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
       return newSet;
     });
   };
-
+  
   const createNewDictionary = () => {
     if (!user) {
       showToast('Р’РѕР№РґРёС‚Рµ РІ Р°РєРєР°СѓРЅС‚ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ СЃР»РѕРІР°СЂРµР№', true);
@@ -166,7 +164,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     }
     setNewDictModalOpen(true);
   };
-
+  
   const handleCardFlip = (index: number, event: React.MouseEvent) => {
     event.stopPropagation();
     const flipBtn = (event.target as HTMLElement).closest('.flip-btn');
@@ -182,7 +180,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
       return newSet;
     });
   };
-
+  
   const handleEditDictionary = (index: number, e: React.MouseEvent) => {
     e.stopPropagation();
     const dict = dictionaries[index];
@@ -195,7 +193,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     setCurrentDict(index);
     onNavigate('editor', index);
   };
-
+  
   const handleDeleteDictionary = (index: number, e: React.MouseEvent) => {
     e.stopPropagation();
     const dict = dictionaries[index];
@@ -219,7 +217,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
       showToast('РЎР»РѕРІР°СЂСЊ СѓРґР°Р»С‘РЅ');
     }
   };
-
+  
   const handleEditDefaultDictionary = (dict: Dictionary, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!useAuthStore.getState().isAdmin()) {
@@ -230,7 +228,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     setCurrentDict(-1 - idx);
     onNavigate('editor', -1 - idx);
   };
-
+  
   const handleDeleteDefaultDictionary = (dict: Dictionary, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!useAuthStore.getState().isAdmin()) {
@@ -247,7 +245,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
     loadDictionaries();
     showToast('Р‘Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ СѓРґР°Р»С‘РЅ');
   };
-
+  
   return (
     <div className="screen active" id="mainScreen">
       <div className="dictionary-grid">
@@ -431,6 +429,7 @@ export default function MainScreen({ onNavigate, showToast }: MainScreenProps) {
             <div className="add-text">Р”РѕР±Р°РІРёС‚СЊ Р±Р°Р·РѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ</div>
           </div>
         )}
+      </div>
 
       {/* Create Dictionary Modal */}
       {newDictModalOpen && (
