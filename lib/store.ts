@@ -127,22 +127,22 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
     const user = useAuthStore.getState().user;
     const isDemoUser = user?.uid?.startsWith('demo_') || !user;
     
-    // Р”РµРґСѓРїР»РёС†РёСЂСѓРµРј Р±Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё РїРѕ РЅР°Р·РІР°РЅРёСЋ
+    // Р§РёС‚Р°РµРј Р»РѕРєР°Р»СЊРЅС‹Рµ Р±Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё
     const stored = localStorage.getItem('nlk_default_dictionaries');
-    let defaults: Dictionary[] = [];
+    let localDefaults: Dictionary[] = [];
     
     if (stored) {
       try {
-        defaults = JSON.parse(stored);
+        localDefaults = JSON.parse(stored);
       } catch (e) {
         console.error('loadDictionaries: failed to parse stored defaults', e);
       }
     }
     
-    // РЈРґР°Р»СЏРµРј РґСѓР±Р»РёРєР°С‚С‹ РїРѕ РЅР°Р·РІР°РЅРёСЋ (РѕСЃС‚Р°РІР»СЏРµРј РїРµСЂРІС‹Р№)
+    // РЈРґР°Р»СЏРµРј РґСѓР±Р»РёРєР°С‚С‹ РїРѕ РЅР°Р·РІР°РЅРёСЋ
     const seen = new Set<string>();
     const deduped: Dictionary[] = [];
-    for (const d of defaults) {
+    for (const d of localDefaults) {
       if (!seen.has(d.name)) {
         seen.add(d.name);
         deduped.push(d);
@@ -150,69 +150,50 @@ export const useDictionariesStore = create<DictionariesState>((set, get) => ({
     }
     
     localStorage.setItem('nlk_default_dictionaries', JSON.stringify(deduped));
+    localDefaults = deduped;
     
     if (isDemoUser) {
       try {
         const demoDicts = JSON.parse(localStorage.getItem('nlk_demo_dictionaries') || '[]');
-        set({ defaultDictionaries: deduped, dictionaries: demoDicts, isLoading: false });
+        set({ defaultDictionaries: localDefaults, dictionaries: demoDicts, isLoading: false });
       } catch (e) {
         console.error('loadDictionaries: failed to parse demo dictionaries', e);
-        set({ defaultDictionaries: deduped, isLoading: false });
+        set({ defaultDictionaries: localDefaults, isLoading: false });
       }
-    // РџСЂРѕРІРµСЂСЏРµРј РѕР±РЅРѕРІР»РµРЅРёСЏ Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№ РІ С„РѕРЅРµ (Р»РѕРєР°Р»СЊРЅС‹Рµ РёРјРµСЋС‚ РїСЂРёРѕСЂРёС‚РµС‚)
+      return;
+    }
+    
+    // Р”Р»СЏ СЂРµР°Р»СЊРЅС‹С… РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№: РјРµСЂР¶РёРј СЃРµСЂРІРµСЂРЅС‹Рµ Рё Р»РѕРєР°Р»СЊРЅС‹Рµ Р±Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё
     try {
-      const defaultDicts = await db.getDefaultDictionaries();
-      const stored = localStorage.getItem('nlk_default_dictionaries');
-      const localDefaults: Dictionary[] = stored ? JSON.parse(stored) : [];
+      const serverDefaults = await db.getDefaultDictionaries();
       
-      // Р›РѕРєР°Р»СЊРЅС‹Рµ Р±Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё РІСЃРµРіРґР° РїРµСЂРµР·Р°РїРёСЃС‹РІР°СЋС‚ СЃРµСЂРІРµСЂРЅС‹Рµ (РїСЂРёРѕСЂРёС‚РµС‚ Р°РґРјРёРЅР°)
-      const merged = [...defaultDicts];
+      // РЎРѕР·РґР°РµРј РјР°РїСѓ СЃРµСЂРІРµСЂРЅС‹С… СЃР»РѕРІР°СЂРµР№
+      const mergedMap = new Map<string, Dictionary>();
+      for (const d of serverDefaults) {
+        mergedMap.set(d.id, d);
+      }
+      
+      // Р›РѕРєР°Р»СЊРЅС‹Рµ Р±Р°Р·РѕРІС‹Рµ СЃР»РѕРІР°СЂРё РёРјРµСЋС‚ РїСЂРёРѕСЂРёС‚РµС‚ (СЌС‚Рѕ СЂРµР·СѓР»СЊС‚Р°С‚ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ Р°РґРјРёРЅРѕРј)
       for (const localDict of localDefaults) {
-        const idx = merged.findIndex(d => d.id === localDict.id);
-        if (idx >= 0) {
-          merged[idx] = localDict; // Р›РѕРєР°Р»СЊРЅР°СЏ РІРµСЂСЃРёСЏ РІР°Р¶РЅРµРµ
-        } else {
-          merged.push(localDict);
-        }
+        mergedMap.set(localDict.id, localDict);
       }
       
-      set({ defaultDictionaries: merged });
+      const mergedDefaults = Array.from(mergedMap.values());
+      
+      // Р—Р°РіСЂСѓР¶Р°РµРј РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёРµ СЃР»РѕРІР°СЂРё
+      const localDicts = JSON.parse(localStorage.getItem('nlk_demo_dictionaries') || '[]');
+      await sync.syncPendingChanges(user.uid);
+      const mergedDicts = await sync.loadAndMergeDictionaries(user.uid, localDicts);
+      localStorage.setItem('nlk_demo_dictionaries', JSON.stringify(mergedDicts));
+      
+      set({ defaultDictionaries: mergedDefaults, dictionaries: mergedDicts, isLoading: false });
+      return; // Р’Р°Р¶РЅРѕ: РІС‹С…РѕРґРёРј, С‡С‚РѕР±С‹ РЅРµ РІС‹РїРѕР»РЅСЏР»СЃСЏ Р»РёС€РЅРёР№ РєРѕРґ
     } catch (e) {
-      console.error('loadDictionaries: failed to fetch default dictionaries', e);
+      console.error('loadDictionaries: failed to load dictionaries', e);
+      const localDicts = JSON.parse(localStorage.getItem('nlk_demo_dictionaries') || '[]');
+      set({ defaultDictionaries: localDefaults, dictionaries: localDicts, isLoading: false });
     }
-    return;
-  }
-  
-  try {
-    const localDicts = JSON.parse(localStorage.getItem('nlk_demo_dictionaries') || '[]');
-    await sync.syncPendingChanges(user.uid);
-    const mergedDicts = await sync.loadAndMergeDictionaries(user.uid, localDicts);
-    localStorage.setItem('nlk_demo_dictionaries', JSON.stringify(mergedDicts));
-    set({ defaultDictionaries: deduped, dictionaries: mergedDicts, isLoading: false });
-  } catch {
-    const localDicts = JSON.parse(localStorage.getItem('nlk_demo_dictionaries') || '[]');
-    set({ defaultDictionaries: deduped, dictionaries: localDicts, isLoading: false });
-  }
-  
-  // РџСЂРѕРІРµСЂСЏРµРј РѕР±РЅРѕРІР»РµРЅРёСЏ Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№ РІ С„РѕРЅРµ (Р»РѕРєР°Р»СЊРЅС‹Рµ РёРјРµСЋС‚ РїСЂРёРѕСЂРёС‚РµС‚)
-  try {
-    const defaultDicts = await db.getDefaultDictionaries();
-    const stored = localStorage.getItem('nlk_default_dictionaries');
-    const localDefaults: Dictionary[] = stored ? JSON.parse(stored) : [];
-    
-    const merged = [...defaultDicts];
-    for (const localDict of localDefaults) {
-      const idx = merged.findIndex(d => d.id === localDict.id);
-      if (idx >= 0) {
-        merged[idx] = localDict; // Р›РѕРєР°Р»СЊРЅР°СЏ РІРµСЂСЃРёСЏ РІР°Р¶РЅРµРµ
-      } else {
-        merged.push(localDict);
-      }
-    }
-    
-    set({ defaultDictionaries: merged });
-  } catch {}
-},
+  },
 
   createDictionary: async (userId: string, name: string): Promise<string | null> => {
     try {
@@ -483,10 +464,15 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
       if (isDefaultDict) {
         // Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ Р±Р°Р·РѕРІС‹С… СЃР»РѕРІР°СЂРµР№ (СЃРѕС…СЂР°РЅСЏРµРј РІ localStorage)
         const defaultDicts = JSON.parse(localStorage.getItem('nlk_default_dictionaries') || '[]');
-        const dictIndex = defaultDicts.findIndex((d: any) => d.id === dictId);
+        let dictIndex = defaultDicts.findIndex((d: any) => d.id === dictId);
         
         if (dictIndex < 0) {
           return { success: false, error: 'РЎР»РѕРІР°СЂСЊ РЅРµ РЅР°Р№РґРµРЅ' };
+        }
+        
+        // Р“Р°СЂР°РЅС‚РёСЂСѓРµРј РЅР°Р»РёС‡РёРµ РїРѕР»СЏ words
+        if (!defaultDicts[dictIndex].words) {
+          defaultDicts[dictIndex].words = [];
         }
         
         if (isEditing) {
@@ -519,14 +505,15 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
         
         localStorage.setItem('nlk_default_dictionaries', JSON.stringify(defaultDicts));
         
-        // РЇРІРЅРѕ РѕР±РЅРѕРІР»СЏРµРј defaultDictionaries РІ СЃС‚РѕСЂРµ, С‡С‚РѕР±С‹ UI РѕР±РЅРѕРІРёР»СЃСЏ РјРіРЅРѕРІРµРЅРЅРѕ
+        // Р§РёС‚Р°РµРј С‚РµРєСѓС‰РёР№ СЃС‚РѕСЂ Рё РѕР±РЅРѕРІР»СЏРµРј С‚РѕР»СЊРєРѕ РёР·РјРµРЅРµРЅРЅС‹Р№ СЃР»РѕРІР°СЂСЊ
         const currentDefaults = useDictionariesStore.getState().defaultDictionaries;
         const updatedDefaults = currentDefaults.map(d => 
           d.id === dictId ? defaultDicts[dictIndex] : d
         );
-        useDictionariesStore.setState({ defaultDictionaries: updatedDefaults });
+        useDictionariesStore.setState({ 
+          defaultDictionaries: updatedDefaults 
+        });
         
-        await useDictionariesStore.getState().loadDictionaries();
         get().clearEditor();
         return { success: true };
       }
